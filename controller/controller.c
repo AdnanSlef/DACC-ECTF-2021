@@ -11,8 +11,6 @@
  */
 
 #include "controller.h"
-#include <time.h>  //clock, CLOCKS_PER_SEC
-#include <stdio.h> //sprintf
 
 // this will run if EXAMPLE_AES is defined in the Makefile (see line 54)
 #ifdef EXAMPLE_AES
@@ -233,25 +231,13 @@ int main() {
   AES_init_ctx_iv(&ctx, key, iv);
 
   // encrypt buffer (encryption happens in place)
-  clock_t start, end;
-  double cpu_time_used;
-  char debug_string[100];
-
-  start = clock();
   AES_CBC_encrypt_buffer(&ctx, plaintext, 0x4000);
-  end = clock();
-  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  sprintf(debug_string, "Example encrypted message (time %f):", cpu_time_used);
-  send_str(debug_string);
+  send_str("Example encrypted message:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
 
   // decrypt buffer (decryption happens in place)
-  start = clock();
   AES_CBC_decrypt_buffer(&ctx, plaintext, 0x4000);
-  end = clock();
-  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  sprintf(debug_string, "Example decrypted message (time %f):", cpu_time_used);
-  send_str(debug_string);
+  send_str("Example decrypted message:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
   // end example
 #endif
