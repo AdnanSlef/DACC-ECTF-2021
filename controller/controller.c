@@ -279,6 +279,10 @@ void test_ecc() {
     return;
   }
 
+  //debug the shared secrets; they should match
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret1);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret2);
+
 }
 
 int main() {
