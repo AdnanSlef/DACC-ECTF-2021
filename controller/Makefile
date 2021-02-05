@@ -35,31 +35,57 @@ all: ${COMPILER}
 LDFLAGS+=${COMPILER}/interface.o
 all: ${COMPILER}/interface.o
 
-################ start crypto example ################
+################ start aes inclusion ################
 # example AES rules to build in tiny-AES-c: https://github.com/kokke/tiny-AES-c
 # make sure submodule has been pulled (run `git submodule update --init`)
 # uncomment next line to activate
-DO_MAKE_TINY_AES=yes
+#DO_MAKE_TINY_AES=yes
 ifdef DO_MAKE_TINY_AES
-# path to crypto library
-CRYPTOPATH=./tiny-AES-c
+# path to aes library
+AESPATH=./tiny-AES-c
 
-# add path to crypto source files to source path
-VPATH+=${CRYPTOPATH}
+# add path to aes source files to source path
+VPATH+=${AESPATH}
 
-# add crypto library to includes path
-IPATH+=${CRYPTOPATH}
+# add aes library to includes path
+IPATH+=${AESPATH}
 
-# add crypto object file to includes path
+# add aes object file to includes path
 LDFLAGS+=${COMPILER}/aes.o
 
-# add compiler flag to enable example AES code 
-CFLAGS+=-DEXAMPLE_AES
+# add compiler flag to enable test AES code 
+CFLAGS+=-DTEST_AES
 
-# add rule to build crypto library
+# add rule to build aes library
 all: ${COMPILER}/aes.o
 endif
-################ end crypto example ################
+################# end aes inclusion #################
+
+
+################ start ecc inclusion ################
+DO_MAKE_MICRO_ECC=yes
+ifdef DO_MAKE_MICRO_ECC
+
+#path to ecc library
+ECCPATH=./micro-ecc
+
+#add path to ecc source files to source path
+VPATH+=${ECCPATH}
+
+#add ecc library to includes path
+IPATH+=${ECCPATH}
+
+# add ecc object file to includes path
+LDFLAGS+=${COMPILER}/uECC.o
+
+# add compiler flag to enable test ECC code
+CFLAGS+=-DTEST_ECC
+
+# add rule to build ecc library
+all: ${COMPILER}/uECC.o
+endif
+################# end ecc inclusion #################
+
 
 # this must be the last build rule of `all`
 all: ${COMPILER}/controller.axf

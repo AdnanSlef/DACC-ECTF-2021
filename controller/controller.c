@@ -11,7 +11,14 @@
  */
 
 #include "controller.h"
+
+#ifdef TEST_AES
 #include "aes.h"
+#endif
+
+#ifdef TEST_ECC
+#include "uECC.h"
+#endif
 
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
 
@@ -200,15 +207,8 @@ int sss_deregister() {
   return msg.op == SCEWL_SSS_DEREG;
 }
 
-int main() {
-  int registered = 0, len;
-  scewl_hdr_t hdr;
-  uint16_t src_id, tgt_id;
-
-  // initialize interfaces
-  intf_init(CPU_INTF);
-  intf_init(SSS_INTF);
-  intf_init(RAD_INTF);
+#ifdef TEST_AES
+void test_aes() {
 
   // example encryption using tiny-AES-c
   struct AES_ctx ctx;
@@ -231,6 +231,65 @@ int main() {
   debug_str("Example decrypted message:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
   // end example
+}
+#endif
+
+int unsafe_test_rng(uint8_t *dest, unsigned int size) {
+  return 1;
+}
+
+void test_ecc() {
+  uint8_t private1[32] = {0};
+  uint8_t private2[32] = {0};
+  uint8_t public1[64] = {0};
+  uint8_t public2[64] = {0};
+  uint8_t secret1[32] = {0};
+  uint8_t secret2[32] = {0};
+
+  struct uECC_Curve_t *curve = uECC_secp256k1();
+
+  uECC_set_rng(&unsafe_test_rng);
+
+  if (!uECC_make_key(public1, private1, curve) ||
+      !uECC_make_key(public2, private2, curve))
+  {
+    debug_str("uECC_make_key() failed");
+    return;
+  }
+
+  if (!uECC_shared_secret(public2, private1, secret1, curve)) {
+    debug_str("shared_secret() call 1 failed");
+    return 1;
+  }
+
+  if (!uECC_shared_secret(public1, private2, secret2, curve)) {
+    debug_str("shared_secret() call 2 failed");
+    return 1;
+  }
+
+}
+
+int main() {
+  int registered = 0, len;
+  scewl_hdr_t hdr;
+  uint16_t src_id, tgt_id;
+
+  // initialize interfaces
+  intf_init(CPU_INTF);
+  intf_init(SSS_INTF);
+  intf_init(RAD_INTF);
+
+  /* do  AES test */
+  #ifdef TEST_AES
+  test_aes();
+  #endif
+  /* end AES test */
+
+  /* do  ECC test */
+  #ifdef TEST_ECC
+  test_ecc();
+  #endif
+  /* end ECC test */
 
   // serve forever
   while (1) {
