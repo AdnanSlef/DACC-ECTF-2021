@@ -235,7 +235,8 @@ int main() {
   send_str("Example encrypted message:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
 
-  AES_init_ctx_iv(&ctx, key, iv); //encryption just mangled the iv; fix it.
+  AES_ctx_set_iv(&ctx, key, iv); //encryption just mangled ctx.Iv; fix it.
+
   // decrypt buffer (decryption happens in place)
   AES_CBC_decrypt_buffer(&ctx, plaintext, 0x4000);
   send_str("Example decrypted message:");
