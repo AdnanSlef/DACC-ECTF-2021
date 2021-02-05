@@ -39,7 +39,7 @@ all: ${COMPILER}/interface.o
 # example AES rules to build in tiny-AES-c: https://github.com/kokke/tiny-AES-c
 # make sure submodule has been pulled (run `git submodule update --init`)
 # uncomment next line to activate
-# EXAMPLE_AES=foo
+EXAMPLE_AES=foo #TODO recomment
 ifdef EXAMPLE_AES
 # path to crypto library
 CRYPTOPATH=./tiny-AES-c
