@@ -235,7 +235,7 @@ void test_aes() {
 #endif
 
 //Numerical Recipes LCG, take 2nd-most significant byte
-int unsafe_rng_counter = 0xdeadbeef;
+int unsafe_rng_counter = 0xdeadbeef; //RNG Seed will come from SSS
 int unsafe_test_rng(uint8_t *dest, unsigned int size) {
   
   while (size) {
@@ -280,9 +280,17 @@ void test_ecc() {
   }
 
   //debug the shared secrets; they should match
+  debug_str("Shared secrets 1 and 2:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret1);
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret2);
 
+  debug_str("Public keys 1 and 2:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, public1);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, public2);
+
+  debug_str("Private keys 1 and 2:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, private1);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, private2);
 }
 
 int main() {
