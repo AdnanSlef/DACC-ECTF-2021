@@ -234,7 +234,19 @@ void test_aes() {
 }
 #endif
 
+//Numerical Recipes LCG, take 2nd-most significant byte
+int unsafe_rng_counter = 0xdeadbeef;
 int unsafe_test_rng(uint8_t *dest, unsigned int size) {
+  
+  while (size) {
+    unsafe_rng_counter *= 1664525;
+    unsafe_rng_counter += 1013904223;
+    
+    *dest = ((uint8_t *)&unsafe_rng_counter)[2];
+
+    dest++;
+    size--;
+  }
   return 1;
 }
 
@@ -246,7 +258,7 @@ void test_ecc() {
   uint8_t secret1[32] = {0};
   uint8_t secret2[32] = {0};
 
-  struct uECC_Curve_t *curve = uECC_secp256k1();
+  const struct uECC_Curve_t *curve = uECC_secp256k1();
 
   uECC_set_rng(&unsafe_test_rng);
 
@@ -259,12 +271,12 @@ void test_ecc() {
 
   if (!uECC_shared_secret(public2, private1, secret1, curve)) {
     debug_str("shared_secret() call 1 failed");
-    return 1;
+    return;
   }
 
   if (!uECC_shared_secret(public1, private2, secret2, curve)) {
     debug_str("shared_secret() call 2 failed");
-    return 1;
+    return;
   }
 
 }
