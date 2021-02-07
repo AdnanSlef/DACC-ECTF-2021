@@ -318,6 +318,8 @@ int main() {
 
   /*   test secrets   */
   debug_str(depl_id_str);
+  depl_id_str[1] = 0xd0;
+  debug_str(depl_id_str);
   /* end secrets test */
 
   // serve forever
