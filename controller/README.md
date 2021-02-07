@@ -1,4 +1,4 @@
-# SCEWL Bus Controller
+# 0xDACC SCEWL Bus Controller
 The SCEWL Bus Controller implements the security and functionality of the SCEWL
 protocol and is one of two components our team had to implement (the other being
 the SSS in `/sss/`). The SCEWL Bus Controller runs on a Stellaris lm3s6965 chip,
@@ -30,4 +30,4 @@ Our design relies on a number of crypto libraries to provide cryptographic funct
 These are included as submodules.
 
 * `micro-ecc/`: Provides ECDH and ECDSA functionality. From https://github.com/kmackay/micro-ecc.
-* `tiny-AES-c/`: Provides AES functionality, and implements CTR and CBC (no padding provided) modes.
+* `tiny-AES-c/`: Provides AES functionality, and implements CTR and CBC (no padding provided) modes. From https://github.com/kokke/tiny-AES-c.
