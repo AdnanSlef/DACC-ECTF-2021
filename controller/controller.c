@@ -108,11 +108,31 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
 
 
 int handle_scewl_recv(char* data, scewl_id_t src_id, uint16_t len) {
+  struct AES_ctx ctx;
+  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
+  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
+  
+  // initialize context
+  AES_init_ctx_iv(&ctx, key, iv);
+  
+  // decrypt buffer (decryption happens in place)
+  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO watch for Defense in Depth
+
   return send_msg(CPU_INTF, src_id, SCEWL_ID, len, data);
 }
 
 
 int handle_scewl_send(char* data, scewl_id_t tgt_id, uint16_t len) {
+  struct AES_ctx ctx;
+  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
+  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
+  
+  // initialize context
+  AES_init_ctx_iv(&ctx, key, iv);
+
+  // encrypt buffer (encryption happens in place)
+  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO check Defense in Depth
+
   return send_msg(RAD_INTF, SCEWL_ID, tgt_id, len, data);
 }
 
@@ -306,13 +326,13 @@ int main() {
 
   /* do  AES test */
   #ifdef TEST_AES
-  test_aes();
+  //test_aes();
   #endif
   /* end AES test */
 
   /* do  ECC test */
   #ifdef TEST_ECC
-  test_ecc();
+  //test_ecc();
   #endif
   /* end ECC test */
 

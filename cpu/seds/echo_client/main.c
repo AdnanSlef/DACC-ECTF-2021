@@ -82,6 +82,8 @@ int main(void) {
   // receive response (block until response received)
   fprintf(log, "Waiting for response...\n");
   scewl_recv(data, &src_id, &tgt_id, BUF_SZ, 1);
+  fprintf(log, data);
+  fprintf(log, "\n");
 
   // check if response matches
   if (!strcmp(msg, data)) {
