@@ -8,7 +8,7 @@ import argparse
 import os
 
 # CONSTANTS
-DEBUG = 1
+DEBUG = 0
 DEPL_COUNT = 2
 COMMANDS = ["before", "per"]
 
@@ -27,7 +27,7 @@ def assign_secrets(SCEWL_ID):
         cf.write(str(depl_id+1))
     with open(route(f"depl_id_{depl_id}"), 'r') as sfile:
         secrets = sfile.read()
-    with open(route(f"{SCEWL_ID}.secrets"),'w') as of:
+    with open(route(f"{SCEWL_ID}.secret"),'w') as of:
         of.write(secrets)
 
 # Create a null counter
@@ -56,7 +56,7 @@ const uint8_t ECC_PUBLICS_DB[ECC_PUBSIZE][DEPL_COUNT] = {{"""
     secrets += f"""
 }};
 
-#endif //SECRET_H
+#endif //SECRETS_H
 """
     with open((f"depl_id_{depl_id}" if DEBUG else f"/secrets/depl_id_{depl_id}"), 'w') as sfile:
         sfile.write(secrets)

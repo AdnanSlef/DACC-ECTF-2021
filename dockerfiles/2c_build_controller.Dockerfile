@@ -10,7 +10,7 @@ ARG DEPLOYMENT
 # if you want to copy files from the sss container,               #
 # first create an intermediate stage:                             #
 #                                                                 #
-FROM ${DEPLOYMENT}:sss as sss                                     
+FROM ${DEPLOYMENT}/sss:latest as sss                                     
 #                                                                 #
 # Then see box below                                              #
 ###################################################################
@@ -25,6 +25,7 @@ ADD . /sed
 ###################################################################
 # Copy files from the SSS container                               #
 #                                                                 #
+ARG SCEWL_ID
 COPY --from=sss /secrets/${SCEWL_ID}.secret /sed/sed.secret.h
 #                                                                 #
 ###################################################################

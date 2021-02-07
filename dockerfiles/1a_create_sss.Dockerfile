@@ -21,3 +21,8 @@ RUN mkdir /secrets
 #       (e.g. only mapping in the files you need for the SSS rather than the entire repo)
 ADD sss.py /sss
 
+# map in helper
+ADD helper.py /helper
+
+#Generate secrets for each depl_id
+RUN /helper before
