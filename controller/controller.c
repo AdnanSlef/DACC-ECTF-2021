@@ -11,6 +11,7 @@
  */
 
 #include "controller.h"
+#include "sed.secret.h"
 
 #ifdef TEST_AES
 #include "aes.h"
@@ -314,6 +315,10 @@ int main() {
   test_ecc();
   #endif
   /* end ECC test */
+
+  /*   test secrets   */
+  debug_str(depl_id_str);
+  /* end secrets test */
 
   // serve forever
   while (1) {

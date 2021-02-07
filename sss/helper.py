@@ -56,6 +56,8 @@ const uint8_t ECC_PUBLICS_DB[ECC_PUBSIZE][DEPL_COUNT] = {{"""
     secrets += f"""
 }};
 
+char depl_id_str[8] = "{str(depl_id)}";
+
 #endif //SECRETS_H
 """
     with open((f"depl_id_{depl_id}" if DEBUG else f"/secrets/depl_id_{depl_id}"), 'w') as sfile:
