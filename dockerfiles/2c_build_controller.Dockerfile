@@ -40,7 +40,7 @@ RUN make SCEWL_ID=${SCEWL_ID}
 RUN mv /sed/gcc/controller.bin /controller
 
 #Remove the secrets file
-#RUN rm /sed/sed.secret.h
+RUN rm /sed/sed.secret.h
 
 # NOTE: If you want to use the debugger with the scripts we provide, 
 #       the ELF file must be at /controller.elf
