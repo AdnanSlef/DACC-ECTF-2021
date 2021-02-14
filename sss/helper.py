@@ -57,7 +57,7 @@ def make_a_secret(depl_id):
 #define DEPL_COUNT {DEPL_COUNT}
 #define ECC_PUBSIZE 64
 #define ECC_PRIVSIZE 32
-const uint8_t ECC_PUBLICS_DB[ECC_PUBSIZE][DEPL_COUNT] = {{"""
+const uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
     for pubkey in pubkeys:
         secrets += f"""
               {{ {', '.join(hex(b)for b in pubkey)} }},"""

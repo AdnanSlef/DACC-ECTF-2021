@@ -315,6 +315,31 @@ void test_ecc() {
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, private2);
 }
 
+void test_ecc2(void)
+{
+  uint16_t other = !DEPL_ID;
+  uint8_t secret[32] = {0};
+  const struct uECC_Curve_t *curve = uECC_secp256r1();
+  
+  uECC_set_rng(&unsafe_test_rng);
+
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 2, (uint8_t *)&other);
+  if (!uECC_shared_secret(ECC_PUBLICS_DB[other], ECC_PRIVATE_KEY, secret, curve)) {
+    debug_str("shared_secret() call failed");
+    return;
+  }
+
+  //debug the shared secrets; they should match
+  debug_str("My private key:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, ECC_PRIVATE_KEY);
+  
+  debug_str("Other's public key:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, ECC_PUBLICS_DB[other]);
+  
+  debug_str("Shared secret:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret);
+}
+
 int main() {
   int registered = 0, len;
   scewl_hdr_t hdr;
@@ -333,7 +358,7 @@ int main() {
 
   /* do  ECC test */
   #ifdef TEST_ECC
-  test_ecc();
+  test_ecc2();
   #endif
   /* end ECC test */
 
