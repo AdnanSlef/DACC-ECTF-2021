@@ -22,7 +22,7 @@ from typing import NamedTuple
 SSS_IP = 'localhost'
 SSS_ID = 1
 
-# mirroring scewl enum at scewl.c:4
+# mirroring scewl_sss_op_t enum at controller.h:55 and scewl_bus.h:53
 ALREADY, REG, DEREG = -1, 0, 1
 
 logging.basicConfig(level=logging.INFO)

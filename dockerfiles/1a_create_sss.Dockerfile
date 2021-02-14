@@ -9,7 +9,8 @@ FROM ubuntu:focal
 # Add environment customizations here
 # NOTE: do this first so Docker can used cached containers to skip reinstalling everything
 RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y python3
+    apt-get install -y python3 python3-pip
+RUN pip3 install pycryptodome
 
 # add any deployment-wide secrets here
 RUN mkdir /secrets
@@ -26,3 +27,4 @@ ADD helper.py /helper
 
 #Generate secrets for each depl_id
 RUN /helper before
+RUN cat /secrets/depl_id_0

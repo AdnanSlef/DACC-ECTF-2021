@@ -279,7 +279,8 @@ void test_ecc() {
   uint8_t secret1[32] = {0};
   uint8_t secret2[32] = {0};
 
-  const struct uECC_Curve_t *curve = uECC_secp256k1();
+  // Define the ECC curve here
+  const struct uECC_Curve_t *curve = uECC_secp256r1();
 
   uECC_set_rng(&unsafe_test_rng);
 
@@ -332,13 +333,13 @@ int main() {
 
   /* do  ECC test */
   #ifdef TEST_ECC
-  //test_ecc();
+  test_ecc();
   #endif
   /* end ECC test */
 
   /*   test secrets   */
   debug_str(depl_id_str);
-  depl_id_str[1] = 0xd0;
+  depl_id_str[1] = 0xd0; //Shows that secrets may be modified
   debug_str(depl_id_str);
   /* end secrets test */
 
