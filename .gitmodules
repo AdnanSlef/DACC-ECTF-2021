@@ -4,3 +4,6 @@
 [submodule "controller/micro-ecc"]
 	path = controller/micro-ecc
 	url = https://github.com/kmackay/micro-ecc.git
+[submodule "controller/sweet-b"]
+	path = controller/sweet-b
+	url = https://github.com/westerndigitalcorporation/sweet-b.git
