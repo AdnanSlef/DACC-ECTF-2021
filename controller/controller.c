@@ -26,7 +26,9 @@
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ];
 
-void bxor(uint8_t *buf, uint8_t *key, uint16_t len)
+int unsafe_test_rng(uint8_t *dest, unsigned int size);//TODO remove
+
+void bxor(uint8_t *buf, const uint8_t *key, uint16_t len)
 {
   uint16_t i;
   for (i = 0; i < len; i++) {
@@ -98,8 +100,8 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
   scewl_hdr_t hdr;
 
   // pack header
-  hdr.magicS  = 'S';
-  hdr.magicC  = 'C';
+  hdr.magicS = 'S';
+  hdr.magicC = 'C';
   hdr.src_id = src_id;
   hdr.tgt_id = tgt_id;
   hdr.len    = len;
@@ -128,7 +130,6 @@ int handle_scewl_recv(char* data, scewl_id_t src_id, uint16_t len) {
   return send_msg(CPU_INTF, src_id, SCEWL_ID, len, data);
 }
 
-
 int handle_scewl_send(char* data, scewl_id_t tgt_id, uint16_t len) {
   struct AES_ctx ctx;
   uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
@@ -138,9 +139,68 @@ int handle_scewl_send(char* data, scewl_id_t tgt_id, uint16_t len) {
   AES_init_ctx_iv(&ctx, key, iv);
 
   // encrypt buffer (encryption happens in place)
-  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO check Defense in Depth
+  AES_CTR_xcrypt_buffer(&ctx, data, len);
 
   return send_msg(RAD_INTF, SCEWL_ID, tgt_id, len, data);
+}
+
+int handle_scewl_send_secured(char* data, scewl_id_t tgt_id, uint16_t len) {
+  scewl_hdr_t frame_hdr;
+  secure_hdr_t packet_hdr;
+  uint16_t depl_tgt = !DEPL_ID; //only works in 2-SED mode (TODO use lookup table)
+  uint8_t ss[32]; //shared secret
+  struct AES_ctx ctx;
+  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf }; //TODO random
+  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 }; //TODO random
+  struct uECC_Curve_t *curve = uECC_secp256r1();
+  
+  // establish shared secret
+  uECC_set_rng(&unsafe_test_rng);//TODO use CSPRNG
+  if (!uECC_shared_secret(ECC_PUBLICS_DB[depl_tgt], ECC_PRIVATE_KEY, ss, curve)) {
+    return SCEWL_ERR;
+  }
+
+  // simple key derivation function
+  //TODO ss = hash(raw_ss);
+
+  // initialize context
+  AES_init_ctx_iv(&ctx, key, iv);
+
+  // encrypt buffer (encryption happens in place)
+  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO check Defense in Depth
+  
+  // encrypt key with shared secret
+  bxor(key, ss, 16);
+
+  // pack packet header
+  packet_hdr.src = DEPL_ID;
+  packet_hdr.tgt = depl_tgt;
+  packet_hdr.seq = seq++;
+  packet_hdr.ctlen = len;
+  bcopy(packet_hdr.key, key, 16);
+  bcopy(packet_hdr.iv, iv, 16);
+
+  // sign the packet
+  //TODO eccsigbuf = sign(packet)
+  //TODO bcopy(packet_hdr.sig, eccsigbuf, 64);
+  
+  // pack frame header
+  frame_hdr.magicS = 'S';
+  frame_hdr.magicC = 'C';
+  frame_hdr.src_id = SCEWL_ID;
+  frame_hdr.tgt_id = tgt_id;
+  frame_hdr.len    = sizeof(packet_hdr) + packet_hdr.ctlen;
+
+  // send frame header
+  intf_write(RAD_INTF, (char *)&frame_hdr, sizeof(scewl_hdr_t));
+
+  // send packet header
+  intf_write(RAD_INTF, (char *)&packet_hdr, sizeof(secure_hdr_t));
+
+  // send ciphertext
+  intf_write(RAD_INTF, data, len);
+
+  return SCEWL_OK;
 }
 
 
@@ -324,6 +384,7 @@ void test_ecc() {
 
 void test_ecc2(void)
 {
+  /*    Test ECDH    */
   uint16_t other = !DEPL_ID;
   uint8_t secret[32] = {0};
   const struct uECC_Curve_t *curve = uECC_secp256r1();
@@ -345,6 +406,25 @@ void test_ecc2(void)
   
   debug_str("Shared secret:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret);
+  /******************/
+
+  /*   Test ECDSA    */
+  uint8_t message[32];
+  uint8_t hash[32];
+  bcopy(message,secret,32);
+  bcopy(hash,message,32);//TODO hash = sha256(message);
+  uint8_t signature[64];
+
+  uECC_sign(ECC_PRIVATE_KEY, hash, 32, signature, curve);
+
+  debug_str("ECDSA sig:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, signature);
+
+  debug_str(
+    uECC_verify(ECC_PUBLICS_DB[DEPL_ID], hash, 32, signature, curve)
+    ? "Signature correct" : "Signature invalid"
+  );
+  /*******************/
 }
 
 int main() {

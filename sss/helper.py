@@ -67,6 +67,7 @@ const uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
 
 /**** Secrets specific to this SED ****/
 #define DEPL_ID {depl_id}
+uint64_t seq = 0;
 char depl_id_str[8] = "{depl_id}";
 const uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};
 /**************************************/

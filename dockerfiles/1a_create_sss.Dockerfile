@@ -27,4 +27,3 @@ ADD helper.py /helper
 
 #Generate secrets for each depl_id
 RUN /helper before
-RUN cat /secrets/depl_id_0
