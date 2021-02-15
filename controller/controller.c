@@ -26,6 +26,13 @@
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ];
 
+void bxor(uint8_t *buf, uint8_t *key, uint16_t len)
+{
+  uint16_t i;
+  for (i = 0; i < len; i++) {
+    buf[i] ^= key[i];
+  }
+}
 
 int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
              size_t n, int blocking) {

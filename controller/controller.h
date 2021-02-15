@@ -48,6 +48,19 @@ typedef struct scewl_sss_msg_t {
   uint16_t   op;
 } scewl_sss_msg_t;
 
+// Network-layer header struct
+typedef struct __attribute__((__packed__)) secure_hdr_t {
+  uint16_t src;     //src and tgt are depl_id's, not SCEWL_ID's
+  uint16_t tgt;
+  uint8_t sig[64];  //ECDSA signature
+  uint64_t seq;     //64-bit sequence number
+  uint16_t ctlen;
+  uint16_t padding;
+  uint8_t key[16];  //128-bit encrypted AES key
+  uint8_t iv[16];
+  /* ciphertext follows*/
+} secure_hdr_t;
+
 // SCEWL status codes
 enum scewl_status { SCEWL_ERR = -1, SCEWL_OK, SCEWL_ALREADY, SCEWL_NO_MSG };
 
