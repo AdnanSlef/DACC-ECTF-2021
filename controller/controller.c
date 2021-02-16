@@ -21,6 +21,11 @@
 #include "uECC.h"
 #endif
 
+#ifdef TEST_ECC_B
+#include "sb_all.h"
+#include "sb_sha256.h" //shouldn't be necessary
+#endif
+
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
 
 // message buffer
@@ -33,6 +38,14 @@ void bxor(uint8_t *buf, const uint8_t *key, uint16_t len)
   uint16_t i;
   for (i = 0; i < len; i++) {
     buf[i] ^= key[i];
+  }
+}
+
+void bcopy(uint8_t *dst, const uint8_t *src, uint16_t len)
+{
+  while (0 != len) {
+    len--;
+    dst[len] = src[len];
   }
 }
 
@@ -427,6 +440,56 @@ void test_ecc2(void)
   /*******************/
 }
 
+void test_eccb(void)
+{
+  /*    Test ECDH    */
+  uint16_t other = !DEPL_ID;
+  uint8_t secret[32] = {0};
+  const struct uECC_Curve_t *curve = uECC_secp256r1();
+  
+  uECC_set_rng(&unsafe_test_rng);
+
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 2, (uint8_t *)&other);
+  if (!uECC_shared_secret(ECC_PUBLICS_DB[other], ECC_PRIVATE_KEY, secret, curve)) {
+    debug_str("shared_secret() call failed");
+    return;
+  }
+
+  //debug the shared secrets; they should match
+  debug_str("My private key:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, ECC_PRIVATE_KEY);
+  
+  debug_str("Other's public key:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, ECC_PUBLICS_DB[other]);
+  
+  debug_str("Shared secret:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret);
+  /******************/
+
+  /*   Test ECDSA    */
+  uint8_t *message = "abc";
+  uint8_t hash[SB_SHA256_SIZE];
+  sb_sha256_state_t ctx;
+
+  sb_sha256_message(&ctx, hash, message, 3); //only abc, not \0
+  
+  debug_str("SHA-256 hash:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, SB_SHA256_SIZE, hash);
+
+  uint8_t signature[64];
+  uECC_sign(ECC_PRIVATE_KEY, hash, 32, signature, curve);
+
+  debug_str("ECDSA sig:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, signature);
+
+  debug_str(
+    uECC_verify(ECC_PUBLICS_DB[DEPL_ID], hash, 32, signature, curve)
+    ? "Signature correct" : "Signature invalid"
+  );
+  /*******************/
+}
+
+
 int main() {
   int registered = 0, len;
   scewl_hdr_t hdr;
@@ -443,11 +506,17 @@ int main() {
   #endif
   /* end AES test */
 
-  /* do  ECC test */
+  /* do  uECC test */
   #ifdef TEST_ECC
-  test_ecc2();
+  //test_ecc2();
   #endif
-  /* end ECC test */
+  /* end uECC test */
+
+  /* do  sweet-b test */
+  #ifdef TEST_ECC_B
+  test_eccb();
+  #endif
+  /* end sweet-b test */
 
   /*   test secrets   */
   debug_str(depl_id_str);

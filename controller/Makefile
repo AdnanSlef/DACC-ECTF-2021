@@ -62,29 +62,59 @@ endif
 ################# end aes inclusion #################
 
 
-################ start ecc inclusion ################
+################ start uECC inclusion ################
 DO_MAKE_MICRO_ECC=yes
 ifdef DO_MAKE_MICRO_ECC
 
-#path to ecc library
-ECCPATH=./micro-ecc
+# path to uECC library
+UECCPATH=./micro-ecc
 
-#add path to ecc source files to source path
-VPATH+=${ECCPATH}
+# add path to uECC source files to source path
+VPATH+=${UECCPATH}
 
-#add ecc library to includes path
-IPATH+=${ECCPATH}
+# add uECC library to includes path
+IPATH+=${UECCPATH}
 
-# add ecc object file to includes path
+# add uECC object file to includes path
 LDFLAGS+=${COMPILER}/uECC.o
 
-# add compiler flag to enable test ECC code
+# add compiler flag to enable test uECC code
 CFLAGS+=-DTEST_ECC
 
-# add rule to build ecc library
+# add rule to build uECC library
 all: ${COMPILER}/uECC.o
 endif
-################# end ecc inclusion #################
+################# end uECC inclusion #################
+
+
+################ start sweet-b inclusion ################
+DO_MAKE_SWEET_B=yes
+ifdef DO_MAKE_SWEET_B
+
+# path to sweet-b library
+SBPATH=./sweet-b
+
+# add path to sweet-b source files to source path
+VPATH+=${SBPATH}/src
+
+# add sweet-b library to includes path
+IPATH+=${SBPATH}/include
+
+
+# add compiler flag to enable test ECC (B) code
+CFLAGS+=-DTEST_ECC_B
+
+# add compiler flag to allow sweet-b to work on Cortex-M3
+CFLAGS+=-DSB_WORD_SIZE=2
+
+# add sweet-b object file to includes path
+LDFLAGS+=${COMPILER}/sb_sha256.o
+
+# add rules to build sweet-b components
+all: ${COMPILER}/sb_sha256.o
+
+endif
+################# end sweet-b inclusion #################
 
 
 # this must be the last build rule of `all`
