@@ -26,8 +26,7 @@
 #endif
 
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
-#define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), &M)
-#define debug_le(M,N) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, N, &M);
+#define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
 
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ];
@@ -317,7 +316,7 @@ void test_scewl_secure_send()
   uint8_t entropy[32] = { 0xca, 0x85, 0x19, 0x11, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88 };
   uint8_t nonce[16] = { 0x65, 0x9b, 0xa9, 0x6c, 0x60, 0x1d, 0xc6, 0x9f, 0xc9, 0x02, 0x94, 0x08, 0x05, 0xec, 0x0c, 0xa8 };
 
-  sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, depl_id_str, 8);
+  sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, NULL,0);//depl_id_str, 8);
   /**************************/
 
   /*    encrypt a message    */
@@ -379,16 +378,23 @@ void test_scewl_secure_send()
   sb_sha256_init(&sha);
   sb_sha256_update(&sha, fake_ciphertext, len); //TODO sign packet not just ct
   sb_sha256_finish(&sha, &hash);
+  
   debug_str("DRBG status before sb_sw_sign_message_digest:");
+  debug_struct(drbg.reseed_counter);
+
   sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
   
+  debug_str("DRBG status after:");
+  debug_struct(drbg.reseed_counter);
+
   debug_str("Hash:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(hash), &hash);
+  debug_struct(hash);
   debug_str("Non-Deterministic Signature:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(sig), &sig);
+  debug_struct(sig);
   /**********************/
 
   /*    check signature    */
+  public = (sb_sw_public_t *)ECC_PUBLICS_DB[DEPL_ID];
   sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
   debug_struct(ver_err); //\x00\x01\x00\x00 meaning SB_ERROR_SIGNATURE_INVALID
   debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
