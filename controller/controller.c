@@ -26,6 +26,8 @@
 #endif
 
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
+#define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), &M)
+#define debug_le(M,N) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, N, &M);
 
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ];
@@ -308,188 +310,7 @@ int sss_deregister() {
   return msg.op == SCEWL_SSS_DEREG;
 }
 
-#ifdef TEST_AES
-void test_aes() {
-
-  // example encryption using tiny-AES-c
-  struct AES_ctx ctx;
-  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
-  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
-  uint8_t plaintext[0x4020] = "A123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeZ";
-
-  // initialize context
-  AES_init_ctx_iv(&ctx, key, iv);
-
-  // encrypt buffer (encryption happens in place)
-  AES_CBC_encrypt_buffer(&ctx, plaintext, 0x4000);
-  debug_str("Example encrypted message:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
-
-  AES_ctx_set_iv(&ctx, iv); //encryption just mangled ctx.Iv; fix it.
-
-  // decrypt buffer (decryption happens in place)
-  AES_CBC_decrypt_buffer(&ctx, plaintext, 0x4000);
-  debug_str("Example decrypted message:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 0x4000, (char *)plaintext);
-  // end example
-}
-#endif
-
-//Numerical Recipes LCG, take 2nd-most significant byte
-int unsafe_rng_counter = 0xdeadbeef; //RNG Seed will come from SSS
-int unsafe_test_rng(uint8_t *dest, unsigned int size) {
-  
-  while (size) {
-    unsafe_rng_counter *= 1664525;
-    unsafe_rng_counter += 1013904223;
-    
-    *dest = ((uint8_t *)&unsafe_rng_counter)[2];
-
-    dest++;
-    size--;
-  }
-  return 1;
-}
-
-void test_ecc() {
-  uint8_t private1[32] = {0};
-  uint8_t private2[32] = {0};
-  uint8_t public1[64] = {0};
-  uint8_t public2[64] = {0};
-  uint8_t secret1[32] = {0};
-  uint8_t secret2[32] = {0};
-
-  // Define the ECC curve here
-  const struct uECC_Curve_t *curve = uECC_secp256r1();
-
-  uECC_set_rng(&unsafe_test_rng);
-
-  if (!uECC_make_key(public1, private1, curve) ||
-      !uECC_make_key(public2, private2, curve))
-  {
-    debug_str("uECC_make_key() failed");
-    return;
-  }
-
-  if (!uECC_shared_secret(public2, private1, secret1, curve)) {
-    debug_str("shared_secret() call 1 failed");
-    return;
-  }
-
-  if (!uECC_shared_secret(public1, private2, secret2, curve)) {
-    debug_str("shared_secret() call 2 failed");
-    return;
-  }
-
-  //debug the shared secrets; they should match
-  debug_str("Shared secrets 1 and 2:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret1);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret2);
-
-  debug_str("Public keys 1 and 2:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, public1);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, public2);
-
-  debug_str("Private keys 1 and 2:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, private1);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, private2);
-}
-
-void test_ecc2(void)
-{
-  /*    Test ECDH    */
-  uint16_t other = !DEPL_ID;
-  uint8_t secret[32] = {0};
-  const struct uECC_Curve_t *curve = uECC_secp256r1();
-  
-  uECC_set_rng(&unsafe_test_rng);
-
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 2, (uint8_t *)&other);
-  if (!uECC_shared_secret(ECC_PUBLICS_DB[other], ECC_PRIVATE_KEY, secret, curve)) {
-    debug_str("shared_secret() call failed");
-    return;
-  }
-
-  //debug the shared secrets; they should match
-  debug_str("My private key:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, ECC_PRIVATE_KEY);
-  
-  debug_str("Other's public key:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, ECC_PUBLICS_DB[other]);
-  
-  debug_str("Shared secret:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret);
-  /******************/
-
-  /*   Test ECDSA    */
-  uint8_t message[32];
-  uint8_t hash[32];
-  bcopy(message,secret,32);
-  bcopy(hash,message,32);//TODO hash = sha256(message);
-  uint8_t signature[64];
-
-  uECC_sign(ECC_PRIVATE_KEY, hash, 32, signature, curve);
-
-  debug_str("ECDSA sig:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, signature);
-
-  debug_str(
-    uECC_verify(ECC_PUBLICS_DB[DEPL_ID], hash, 32, signature, curve)
-    ? "Signature correct" : "Signature invalid"
-  );
-  /*******************/
-}
-
-void test_eccb(void)
-{
-  /*    Test ECDH    */
-  uint16_t other = !DEPL_ID;
-  uint8_t secret[32] = {0};
-  const struct uECC_Curve_t *curve = uECC_secp256r1();
-  
-  uECC_set_rng(&unsafe_test_rng);
-
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 2, (uint8_t *)&other);
-  if (!uECC_shared_secret(ECC_PUBLICS_DB[other], ECC_PRIVATE_KEY, secret, curve)) {
-    debug_str("shared_secret() call failed");
-    return;
-  }
-
-  //debug the shared secrets; they should match
-  debug_str("My private key:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, ECC_PRIVATE_KEY);
-  
-  debug_str("Other's public key:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, ECC_PUBLICS_DB[other]);
-  
-  debug_str("Shared secret:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 32, secret);
-  /******************/
-
-  /*   Test ECDSA    */
-  uint8_t *message = "abc";
-  uint8_t hash[SB_SHA256_SIZE];
-  sb_sha256_state_t ctx;
-
-  sb_sha256_message(&ctx, hash, message, 3); //only abc, not \0
-  
-  debug_str("SHA-256 hash:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, SB_SHA256_SIZE, hash);
-
-  uint8_t signature[64];
-  uECC_sign(ECC_PRIVATE_KEY, hash, 32, signature, curve);
-
-  debug_str("ECDSA sig:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, signature);
-
-  debug_str(
-    uECC_verify(ECC_PUBLICS_DB[DEPL_ID], hash, 32, signature, curve)
-    ? "Signature correct" : "Signature invalid"
-  );
-  /*******************/
-}
-
-void test_drbg()
+void test_scewl_secure_send()
 {
   /*    instantiate drbg    */
   sb_hmac_drbg_state_t drbg;
@@ -500,7 +321,7 @@ void test_drbg()
   /**************************/
 
   /*    encrypt a message    */
-  struct AES_ctx ctx;
+  struct AES_ctx aes_ctx;
   uint8_t aeskey[16];
   uint8_t iv[16];
   uint8_t data[33] = "A123456789abcdef 123456789abcdeZ"; //plain&cipher text
@@ -515,10 +336,10 @@ void test_drbg()
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, iv);
 
   // initialize AES context
-  AES_init_ctx_iv(&ctx, aeskey, iv);
+  AES_init_ctx_iv(&aes_ctx, aeskey, iv);
 
   // encrypt buffer (in-place)
-  AES_CTR_xcrypt_buffer(&ctx, data, len);
+  AES_CTR_xcrypt_buffer(&aes_ctx, data, len);
 
   debug_str("Ciphertext:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, len, data);
@@ -530,8 +351,6 @@ void test_drbg()
   sb_sw_shared_secret_t secret;
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
   sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[other];
-  sb_hkdf_state_t hkdf;
-  uint8_t xorkey[16];
 
   sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
 
@@ -540,6 +359,8 @@ void test_drbg()
   /*********************************/
 
   /*    encrypt aes key    */
+  sb_hkdf_state_t hkdf;
+  uint8_t xorkey[16];
   sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, 16);
   bxor(aeskey, xorkey, 16);
@@ -547,6 +368,36 @@ void test_drbg()
   debug_str("Encrypted AES key:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, aeskey);
   /*************************/
+
+  /*    sign message    */
+  sb_sw_signature_t sig;
+  sb_sw_message_digest_t hash;
+  sb_sha256_state_t sha;
+  uint8_t fake_ciphertext[33] = "AAAABBBBCCCCDDDDAAAABBBBCCCCDDDD";
+  len = 32;
+
+  sb_sha256_init(&sha);
+  sb_sha256_update(&sha, fake_ciphertext, len); //TODO sign packet not just ct
+  sb_sha256_finish(&sha, &hash);
+  debug_str("DRBG status before sb_sw_sign_message_digest:");
+  sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  
+  debug_str("Hash:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(hash), &hash);
+  debug_str("Non-Deterministic Signature:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(sig), &sig);
+  /**********************/
+
+  /*    check signature    */
+  sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  debug_struct(ver_err); //\x00\x01\x00\x00 meaning SB_ERROR_SIGNATURE_INVALID
+  debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
+  /*************************/
+}
+
+void test_scewl_secure_recv()
+{
+
 }
 
 int main() {
@@ -559,24 +410,12 @@ int main() {
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
 
-  /* do  AES test */
-  #ifdef TEST_AES
-  //test_aes();
-  #endif
-  /* end AES test */
-
-  /* do  uECC test */
-  #ifdef TEST_ECC
-  //test_ecc2();
-  #endif
-  /* end uECC test */
-
-  /* do  sweet-b test */
+  /* do  tests */
   #ifdef TEST_ECC_B
-  test_eccb();
-  test_drbg();
+  test_scewl_secure_send();
+  test_scewl_secure_recv();
   #endif
-  /* end sweet-b test */
+  /* end tests */
 
   /*   test secrets   */
   debug_str(depl_id_str);
