@@ -11,7 +11,8 @@ import Crypto.PublicKey.ECC as ecc
 
 # CONSTANTS
 DEBUG = 0
-DEPL_COUNT = 2
+DEPL_COUNT = 2 #TODO change
+NUM_SEEDS = 3  #TODO change
 COMMANDS = ["before", "per"]
 
 # Return a different path for debugging purposes
@@ -48,6 +49,12 @@ def make_a_secret(depl_id):
     # Calculate public key points
     pubkeys = [ecc.construct(curve='secp256r1',d=bytes_to_long(privkey)).public_key()._point for privkey in privkeys]
     pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys] #format for uECC
+    entropy = map(bytes,[
+                [0xab, 0xcd, 0xff, 0x12, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88],
+                [0xbb, 0xcd, 0xff, 0x12, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88],
+                [0xcb, 0xcd, 0xff, 0x12, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88]
+              ])#TODO randomize
+    nonce = [0x65, 0x9b, 0xa9, 0x6c, 0x60, 0x1d, 0xc6, 0x9f, 0xc9, 0x02, 0x94, 0x08, 0x05, 0xec, 0x0c, 0xa8]#TODO randomize
 
     secrets = f"""
 #ifndef SECRETS_H
@@ -57,6 +64,7 @@ def make_a_secret(depl_id):
 #define DEPL_COUNT {DEPL_COUNT}
 #define ECC_PUBSIZE 64
 #define ECC_PRIVSIZE 32
+#define NUM_SEEDS {NUM_SEEDS}
 uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
     for pubkey in pubkeys:
         secrets += f"""
@@ -69,10 +77,17 @@ uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{10,11}};//TODO populated at registration
 /**** Secrets & info specific to this SED ****/
 #define DEPL_ID {depl_id}
 uint64_t seq = 0;
+uint16_t seed_idx = 0;
 char depl_id_str[8] = "{depl_id}";
 uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};
 uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
-//TODO ENTROPY
+uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
+    for seed in entropy:
+        secrets += f"""
+              {{ {', '.join(hex(b)for b in seed)} }},"""
+    secrets += f"""
+}};
+uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
 /*********************************************/
 
 #endif //SECRETS_H
