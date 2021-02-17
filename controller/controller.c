@@ -49,6 +49,28 @@ void bcopy(uint8_t *dst, const uint8_t *src, uint16_t len)
   }
 }
 
+uint16_t scewl_to_depl(uint16_t scewl_id)
+{
+  for (uint16_t i=0; i<DEPL_COUNT; i++) {
+    if (SCEWL_IDS_DB[i] == scewl_id) {
+      return i;
+    }
+  }
+  //scewl id not found
+  return DEPL_ID; //TODO make sure this is appropriate
+}
+
+uint16_t depl_to_scewl(uint16_t depl_id)
+{
+  if (depl_id < DEPL_COUNT) {
+    return SCEWL_IDS_DB[depl_id];
+  }
+  else {
+    //should never happen
+    return SCEWL_ID;
+  }
+}
+
 int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
              size_t n, int blocking) {
   scewl_hdr_t hdr;
@@ -428,6 +450,12 @@ int main() {
   depl_id_str[1] = 0xd0; //Shows that secrets may be modified
   debug_str(depl_id_str);
   /* end secrets test */
+
+  /* miscelanious tests */
+  uint16_t mysizedebug = sizeof(secure_hdr_t);
+  debug_str("sizeof(secure_hdr_t)");
+  debug_struct(mysizedebug);
+  /* end miscelainous tests */
 
   // serve forever
   while (1) {

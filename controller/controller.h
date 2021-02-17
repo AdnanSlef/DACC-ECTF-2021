@@ -48,11 +48,11 @@ typedef struct scewl_sss_msg_t {
   uint16_t   op;
 } scewl_sss_msg_t;
 
-// Network-layer header struct
+// Network-layer header struct (112 bytes)
 typedef struct __attribute__((__packed__)) secure_hdr_t {
+  uint8_t sig[64];  //ECDSA signature
   uint16_t src;     //src and tgt are depl_id's, not SCEWL_ID's
   uint16_t tgt;
-  uint8_t sig[64];  //ECDSA signature
   uint64_t seq;     //64-bit sequence number
   uint16_t ctlen;
   uint16_t padding;

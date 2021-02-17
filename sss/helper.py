@@ -57,20 +57,23 @@ def make_a_secret(depl_id):
 #define DEPL_COUNT {DEPL_COUNT}
 #define ECC_PUBSIZE 64
 #define ECC_PRIVSIZE 32
-const uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
+uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
     for pubkey in pubkeys:
         secrets += f"""
               {{ {', '.join(hex(b)for b in pubkey)} }},"""
     secrets += f"""
 }};
+uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{10,11}};//TODO populated at registration
 /**************************************/
 
-/**** Secrets specific to this SED ****/
+/**** Secrets & info specific to this SED ****/
 #define DEPL_ID {depl_id}
 uint64_t seq = 0;
 char depl_id_str[8] = "{depl_id}";
-const uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};
-/**************************************/
+uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};
+uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
+//TODO ENTROPY
+/*********************************************/
 
 #endif //SECRETS_H
 """
