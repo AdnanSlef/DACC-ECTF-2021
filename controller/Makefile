@@ -96,10 +96,11 @@ SBPATH=./sweet-b
 
 # add path to sweet-b source files to source path
 VPATH+=${SBPATH}/src
+VPATH+=${SBPATH}/include
 
 # add sweet-b library to includes path
 IPATH+=${SBPATH}/include
-
+IPATH+=${SBPATH}/src
 
 # add compiler flag to enable test ECC (B) code
 CFLAGS+=-DTEST_ECC_B
@@ -107,11 +108,24 @@ CFLAGS+=-DTEST_ECC_B
 # add compiler flag to allow sweet-b to work on Cortex-M3
 CFLAGS+=-DSB_WORD_SIZE=2
 
-# add sweet-b object file to includes path
+# disable the unused curve
+CFLAGS+=-DSB_SW_SECP256K1_SUPPORT=0
+
+# add sweet-b object files to includes path
 LDFLAGS+=${COMPILER}/sb_sha256.o
+LDFLAGS+=${COMPILER}/sb_fe.o
+LDFLAGS+=${COMPILER}/sb_hmac_sha256.o
+LDFLAGS+=${COMPILER}/sb_hmac_drbg.o
+LDFLAGS+=${COMPILER}/sb_hkdf.o
+LDFLAGS+=${COMPILER}/sb_sw_lib.o
 
 # add rules to build sweet-b components
 all: ${COMPILER}/sb_sha256.o
+all: ${COMPILER}/sb_fe.o
+all: ${COMPILER}/sb_hmac_sha256.o
+all: ${COMPILER}/sb_hmac_drbg.o
+all: ${COMPILER}/sb_hkdf.o
+all: ${COMPILER}/sb_sw_lib.o
 
 endif
 ################# end sweet-b inclusion #################

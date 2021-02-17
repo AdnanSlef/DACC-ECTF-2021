@@ -23,7 +23,6 @@
 
 #ifdef TEST_ECC_B
 #include "sb_all.h"
-#include "sb_sha256.h" //shouldn't be necessary
 #endif
 
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
@@ -227,11 +226,12 @@ int handle_brdcst_send(char *data, uint16_t len) {
 }   
 
 
+// left unmodified to comply with FAA specifications
 int handle_faa_recv(char* data, uint16_t len) {
   return send_msg(CPU_INTF, SCEWL_FAA_ID, SCEWL_ID, len, data);
 }
 
-
+// left unmodified to comply with FAA specifications
 int handle_faa_send(char* data, uint16_t len) {
   return send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, len, data);
 }
@@ -489,6 +489,51 @@ void test_eccb(void)
   /*******************/
 }
 
+void test_drbg()
+{
+  /*    instantiate drbg    */
+  sb_hmac_drbg_state_t drbg;
+  uint8_t entropy[32] = { 0xca, 0x85, 0x19, 0x11, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88 };
+  uint8_t nonce[16] = { 0x65, 0x9b, 0xa9, 0x6c, 0x60, 0x1d, 0xc6, 0x9f, 0xc9, 0x02, 0x94, 0x08, 0x05, 0xec, 0x0c, 0xa8 };
+
+  sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, depl_id_str, 8);
+  /**************************/
+  
+
+  /*    encrypt a message    */
+  struct AES_ctx ctx;
+  uint8_t aeskey[16];
+  uint8_t iv[16];
+  uint8_t data[33] = "A123456789abcdef 123456789abcdeZ"; //plain&cipher text
+  int len = 32;
+  
+  //generate secure randomness for aes
+  sb_hmac_drbg_generate(&drbg, aeskey, 16);//TODO reseed
+  sb_hmac_drbg_generate(&drbg, iv, 16);
+
+  debug_str("Random aes key and iv:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, aeskey);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, iv);
+
+  // initialize AES context
+  AES_init_ctx_iv(&ctx, aeskey, iv);
+
+  // encrypt buffer (in-place)
+  AES_CTR_xcrypt_buffer(&ctx, data, len);
+
+  debug_str("Ciphertext:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, len, data);
+  /***************************/
+
+  /*    establish shared secret    */
+  uint16_t other = !DEPL_ID; //TODO lookup table
+  sb_sw_context_t sb_ctx;
+  sb_sw_shared_secret_t secret;
+  sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
+  sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[other];
+
+  sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 0);//TODO handle error
+}
 
 int main() {
   int registered = 0, len;
@@ -515,6 +560,7 @@ int main() {
   /* do  sweet-b test */
   #ifdef TEST_ECC_B
   test_eccb();
+  test_drbg();
   #endif
   /* end sweet-b test */
 
