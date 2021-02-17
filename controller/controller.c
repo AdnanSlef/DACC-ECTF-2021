@@ -498,7 +498,6 @@ void test_drbg()
 
   sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, depl_id_str, 8);
   /**************************/
-  
 
   /*    encrypt a message    */
   struct AES_ctx ctx;
@@ -531,11 +530,23 @@ void test_drbg()
   sb_sw_shared_secret_t secret;
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
   sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[other];
+  sb_hkdf_state_t hkdf;
+  uint8_t xorkey[16];
 
   sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
 
   debug_str("Shared secret:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(secret), &secret);
+  /*********************************/
+
+  /*    encrypt aes key    */
+  sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
+  sb_hkdf_expand(&hkdf, NULL, 0, xorkey, 16);
+  bxor(aeskey, xorkey, 16);
+
+  debug_str("Encrypted AES key:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, aeskey);
+  /*************************/
 }
 
 int main() {
