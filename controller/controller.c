@@ -532,7 +532,10 @@ void test_drbg()
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
   sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[other];
 
-  sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 0);//TODO handle error
+  sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+
+  debug_str("Shared secret:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(secret), &secret);
 }
 
 int main() {
