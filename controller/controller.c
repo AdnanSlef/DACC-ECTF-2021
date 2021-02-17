@@ -31,7 +31,8 @@
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ];
 
-int unsafe_test_rng(uint8_t *dest, unsigned int size);//TODO remove
+// CSPRNG state
+sb_hmac_drbg_state_t drbg;
 
 void bxor(uint8_t *buf, const uint8_t *key, uint16_t len)
 {
@@ -49,7 +50,7 @@ void bcopy(uint8_t *dst, const uint8_t *src, uint16_t len)
   }
 }
 
-uint16_t scewl_to_depl(uint16_t scewl_id)
+uint16_t scewl_to_depl(scewl_id_t scewl_id)
 {
   for (uint16_t i=0; i<DEPL_COUNT; i++) {
     if (SCEWL_IDS_DB[i] == scewl_id) {
@@ -60,14 +61,14 @@ uint16_t scewl_to_depl(uint16_t scewl_id)
   return DEPL_ID; //TODO make sure this is appropriate
 }
 
-uint16_t depl_to_scewl(uint16_t depl_id)
+scewl_id_t depl_to_scewl(uint16_t depl_id)
 {
   if (depl_id < DEPL_COUNT) {
-    return SCEWL_IDS_DB[depl_id];
+    return (scewl_id_t)SCEWL_IDS_DB[depl_id];
   }
   else {
     //should never happen
-    return SCEWL_ID;
+    return (scewl_id_t)SCEWL_ID;
   }
 }
 
@@ -179,6 +180,7 @@ int handle_scewl_send(char* data, scewl_id_t tgt_id, uint16_t len) {
   return send_msg(RAD_INTF, SCEWL_ID, tgt_id, len, data);
 }
 
+/*
 int handle_scewl_send_secured(char* data, scewl_id_t tgt_id, uint16_t len) {
   scewl_hdr_t frame_hdr;
   secure_hdr_t packet_hdr;
@@ -237,7 +239,7 @@ int handle_scewl_send_secured(char* data, scewl_id_t tgt_id, uint16_t len) {
 
   return SCEWL_OK;
 }
-
+*/
 
 int handle_brdcst_recv(char* data, scewl_id_t src_id, uint16_t len) {
   return send_msg(CPU_INTF, src_id, SCEWL_BRDCST_ID, len, data);
@@ -331,22 +333,28 @@ int sss_deregister() {
   return msg.op == SCEWL_SSS_DEREG;
 }
 
-void test_scewl_secure_send()
+void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 {
-  /*    instantiate drbg    */
-  sb_hmac_drbg_state_t drbg;
-  uint8_t entropy[32] = { 0xca, 0x85, 0x19, 0x11, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88 };
-  uint8_t nonce[16] = { 0x65, 0x9b, 0xa9, 0x6c, 0x60, 0x1d, 0xc6, 0x9f, 0xc9, 0x02, 0x94, 0x08, 0x05, 0xec, 0x0c, 0xa8 };
+  /*    check for problems    */
+  // validate input length
+  if (len > 0x4000) {
+    return SCEWL_ERR;
+  }
 
-  sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, NULL,0);//depl_id_str, 8);
-  /**************************/
+  uint8_t entropy[32] = { 0xab, 0xcd, 0xFF, 0x12, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88 };//TODO use entropy source
+  // reseed DRBG if needed
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x18)) {
+    sb_hmac_drbg_reseed(&drbg, entropy, 32, &seq, 8);//TODO overwrite entropy with output (bad but not so bad
+  }
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x18)) {
+    return SCEWL_ERR;
+  }
+  /****************************/
 
   /*    encrypt a message    */
   struct AES_ctx aes_ctx;
   uint8_t aeskey[16];
   uint8_t iv[16];
-  uint8_t data[33] = "A123456789abcdef 123456789abcdeZ"; //plain&cipher text
-  int len = 32;
   
   //generate secure randomness for aes
   sb_hmac_drbg_generate(&drbg, aeskey, 16);//TODO reseed
@@ -367,13 +375,16 @@ void test_scewl_secure_send()
   /***************************/
 
   /*    establish shared secret    */
-  uint16_t other = !DEPL_ID; //TODO lookup table
+  uint16_t tgt_depl_id = scewl_to_depl(tgt_scewl_id);
   sb_sw_context_t sb_ctx;
   sb_sw_shared_secret_t secret;
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
-  sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[other];
+  sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[tgt_depl_id];
 
-  sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  if(SB_SUCCESS != sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1))
+  {
+    return SCEWL_ERR;	  
+  }
 
   debug_str("Shared secret:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(secret), &secret);
@@ -384,28 +395,40 @@ void test_scewl_secure_send()
   uint8_t xorkey[16];
   sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, 16);
-  bxor(aeskey, xorkey, 16);
+  bxor(aeskey, xorkey, 16);//TODO safety check make sure this changes aeskey
 
   debug_str("Encrypted AES key:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, aeskey);
   /*************************/
 
-  /*    sign message    */
+  /*    pack network packet header    */
+  secure_hdr_t net_hdr;
+  net_hdr.src = DEPL_ID;
+  net_hdr.tgt = tgt_depl_id;
+  net_hdr.seq = seq++;
+  net_hdr.ctlen = len;
+  bcopy(net_hdr.key, aeskey, 16);
+  bcopy(net_hdr.iv, iv, 16);
+  /*****************************/
+
+  /*    sign network packet    */
   sb_sw_signature_t sig;
   sb_sw_message_digest_t hash;
   sb_sha256_state_t sha;
-  uint8_t fake_ciphertext[33] = "AAAABBBBCCCCDDDDAAAABBBBCCCCDDDD";
-  len = 32;
 
   sb_sha256_init(&sha);
-  sb_sha256_update(&sha, fake_ciphertext, len); //TODO sign packet not just ct
+  //sign network packet header
+  sb_sha256_update(&sha, (uint8_t *)&net_hdr + sizeof(net_hdr.sig), sizeof(net_hdr)-sizeof(net_hdr.sig));
+  //sign ciphertext
+  sb_sha256_update(&sha, data, len);
   sb_sha256_finish(&sha, &hash);
   
   debug_str("DRBG status before sb_sw_sign_message_digest:");
   debug_struct(drbg.reseed_counter);
 
   sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
-  
+  bcopy(net_hdr.sig, &sig, sizeof(net_hdr.sig));
+
   debug_str("DRBG status after:");
   debug_struct(drbg.reseed_counter);
 
@@ -437,10 +460,19 @@ int main() {
   intf_init(CPU_INTF);
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
+  
+  /*    instantiate drbg    */ //TODO move to register
+  uint8_t entropy[32] = { 0xca, 0x85, 0x19, 0x11, 0x34, 0x93, 0x84, 0xbf, 0xfe, 0x89, 0xde, 0x1c, 0xbd, 0xc4, 0x6e, 0x68, 0x31, 0xe4, 0x4d, 0x34, 0xa4, 0xfb, 0x93, 0x5e, 0xe2, 0x85, 0xdd, 0x14, 0xb7, 0x1a, 0x74, 0x88 };
+  uint8_t nonce[16] = { 0x65, 0x9b, 0xa9, 0x6c, 0x60, 0x1d, 0xc6, 0x9f, 0xc9, 0x02, 0x94, 0x08, 0x05, 0xec, 0x0c, 0xa8 };
+
+  sb_hmac_drbg_init(&drbg, entropy, 32, nonce, 16, depl_id_str, 8);
+  /**************************/
 
   /* do  tests */
   #ifdef TEST_ECC_B
-  test_scewl_secure_send();
+  len = 32;
+  bcopy(buf, "A123456789abcdef 123456789abcdeZ", (uint16_t)len);
+  test_scewl_secure_send(buf, SCEWL_ID==10?11:10, (uint16_t)len);
   test_scewl_secure_recv();
   #endif
   /* end tests */
