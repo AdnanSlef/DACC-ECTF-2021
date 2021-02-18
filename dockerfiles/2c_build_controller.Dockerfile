@@ -42,8 +42,10 @@ RUN mv /sed/gcc/controller.bin /controller
 #                                                                 #
 # Remove the secrets file                                         #
 RUN rm /sed/sed.secret.h
+# Remove build folder, why not                                    #
+RUN rm -r /sed/gcc
 ###################################################################
 
 # NOTE: If you want to use the debugger with the scripts we provide, 
 #       the ELF file must be at /controller.elf
-RUN mv /sed/gcc/controller.axf /controller.elf
+# RUN mv /sed/gcc/controller.axf /controller.elf

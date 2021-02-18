@@ -342,8 +342,8 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   }
 
   // reseed DRBG if needed
-  if (sb_hmac_drbg_reseed_required(&drbg, 0x18)) {
-    if (!sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32)) {
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
 	 //worst-case fallback entropy changer
 	 uint8_t pos = seq % 32;
 	 uint8_t from_idx = seq % 16;
@@ -353,7 +353,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
     seed_idx %= NUM_SEEDS;
     sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
   }
-  if (sb_hmac_drbg_reseed_required(&drbg, 0x18)) {
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     return SCEWL_ERR;
   }
   /****************************/
@@ -364,7 +364,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   uint8_t iv[16];
   
   //generate secure randomness for aes
-  sb_hmac_drbg_generate(&drbg, aeskey, 16);//TODO reseed
+  sb_hmac_drbg_generate(&drbg, aeskey, 16);
   sb_hmac_drbg_generate(&drbg, iv, 16);
 
   debug_str("Random aes key and iv:");
@@ -388,7 +388,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
   sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[tgt_depl_id];
 
-  if(SB_SUCCESS != sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1))
+  if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS)
   {
     return SCEWL_ERR;	  
   }
@@ -401,7 +401,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   sb_hkdf_state_t hkdf;
   uint8_t xorkey[16];
   sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
-  sb_hkdf_expand(&hkdf, NULL, 0, xorkey, 16);
+  sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
   bxor(aeskey, xorkey, 16);//TODO safety check make sure this changes aeskey
 
   debug_str("Encrypted AES key:");
@@ -433,7 +433,9 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   debug_str("DRBG status before sb_sw_sign_message_digest:");
   debug_struct(drbg.reseed_counter);
 
-  sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  if (sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
+    return SCEWL_ERR;
+  }
   bcopy(net_hdr.sig, &sig, sizeof(net_hdr.sig));
 
   debug_str("DRBG status after:");
