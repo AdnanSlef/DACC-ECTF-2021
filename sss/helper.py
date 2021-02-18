@@ -73,7 +73,7 @@ uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{10,11}};//TODO populated at registration
 
 /**** Secrets & info specific to this SED ****/
 #define DEPL_ID {depl_id}
-uint64_t seq = 0;
+uint64_t seq = 1;
 uint16_t seed_idx = 0;
 char depl_id_str[8] = "{depl_id}";
 uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};

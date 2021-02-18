@@ -450,17 +450,78 @@ int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   debug_struct(sig);
   /*****************************/
 
-  /*    check signature    */
+  /*    pack frame header    */
+  scewl_hdr_t frame_hdr;
+  
+  frame_hdr.magicS = 'S';
+  frame_hdr.magicC = 'C';
+  frame_hdr.src_id = SCEWL_ID;
+  frame_hdr.tgt_id = tgt_scewl_id;
+  frame_hdr.len    = sizeof(net_hdr) + net_hdr.ctlen;
+  /***************************/
+
+  /*    send bytes on outbound interface    */
+  // send frame header
+  intf_write(RAD_INTF, (char *)&frame_hdr, sizeof(scewl_hdr_t));
+  
+  // send packet header
+  intf_write(RAD_INTF, (char *)&net_hdr, sizeof(secure_hdr_t));
+  
+  // send ciphertext
+  intf_write(RAD_INTF, data, len);
+  /******************************************/
+
+  return SCEWL_OK;
+}
+
+int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
+{
+  /*    check for problems    */
+  secure_hdr_t *net_hdr = (secure_hdr_t *)data;
+  
+  // validate input length
+  if (len > SCEWL_MAX_DATA_SZ) {
+    return SCEWL_ERR;
+  }
+
+  // verify source
+  if ( depl_to_scewl(net_hdr->src) != src_scewl_id ) {
+    return SCEWL_ERR;
+  }
+
+  // validate length
+  if ( net_hdr->ctlen != len - sizeof(secure_hdr_t) ) {
+    return SCEWL_ERR;
+  }
+
+  // prevent replay
+  if ( net_hdr->seq <= KNOWN_SEQS[net_hdr->src] ) {
+    return SCEWL_ERR;
+  }
+  
+  // reseed DRBG if needed
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
+	 //worst-case fallback entropy changer
+	 uint8_t pos = seq % 32;
+	 uint8_t from_idx = seq % 16;
+	 ENTROPY[seed_idx][pos] = NONCE[from_idx];
+    }
+    seed_idx++; seed_idx %= NUM_SEEDS;
+    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
+  }
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    return SCEWL_ERR;
+  }
+  /****************************/
+
+  debug_str("Wow, I passed the checks!");
+  /*    check signature    *
   public = (sb_sw_public_t *)ECC_PUBLICS_DB[DEPL_ID];
   sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
   debug_struct(ver_err); //\x00\x01\x00\x00 meaning SB_ERROR_SIGNATURE_INVALID
   debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
   /*************************/
-}
-
-void test_scewl_secure_recv()
-{
-
 }
 
 int main() {
@@ -482,8 +543,8 @@ int main() {
   #ifdef TEST_ECC_B
   len = 32;
   bcopy(buf, "A123456789abcdef 123456789abcdeZ", (uint16_t)len);
-  test_scewl_secure_send(buf, SCEWL_ID==10?11:10, (uint16_t)len);
-  test_scewl_secure_recv();
+  //test_scewl_secure_send(buf, SCEWL_ID==10?11:10, (uint16_t)len);
+  //test_scewl_secure_recv(buf, SCEWL_ID==10?11:10, (uint16_t)len);
   #endif
   /* end tests */
 
@@ -524,7 +585,8 @@ int main() {
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-          handle_scewl_send(buf, tgt_id, len);
+          //handle_scewl_send(buf, tgt_id, len);
+	  test_scewl_secure_send(buf, src_id, len);
         }
 
         continue;
@@ -540,7 +602,8 @@ int main() {
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          handle_scewl_recv(buf, src_id, len);
+          //handle_scewl_recv(buf, src_id, len);
+	  test_scewl_secure_recv(buf, src_id, len);
         }
       }
     }
