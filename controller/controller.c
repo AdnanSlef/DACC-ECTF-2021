@@ -333,11 +333,11 @@ int sss_deregister() {
   return msg.op == SCEWL_SSS_DEREG;
 }
 
-void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
+int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 {
   /*    check for problems    */
   // validate input length
-  if (len > 0x4000) {
+  if (len > SCEWL_MAX_DATA_SZ) {
     return SCEWL_ERR;
   }
 
@@ -349,8 +349,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 	 uint8_t from_idx = seq % 16;
 	 ENTROPY[seed_idx][pos] = NONCE[from_idx];
     }
-    seed_idx++;
-    seed_idx %= NUM_SEEDS;
+    seed_idx++; seed_idx %= NUM_SEEDS;
     sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
   }
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
@@ -420,7 +419,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   net_hdr.ctlen = len;
   bcopy(net_hdr.key, aeskey, 16);
   bcopy(net_hdr.iv, iv, 16);
-  /*****************************/
+  /************************************/
 
   /*    sign network packet    */
   sb_sw_signature_t sig;
@@ -449,7 +448,7 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   debug_struct(hash);
   debug_str("Non-Deterministic Signature:");
   debug_struct(sig);
-  /**********************/
+  /*****************************/
 
   /*    check signature    */
   public = (sb_sw_public_t *)ECC_PUBLICS_DB[DEPL_ID];
@@ -476,8 +475,7 @@ int main() {
   
   /*    instantiate drbg    */ //TODO move to register
   sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8);
-  seed_idx++;
-  seed_idx %= NUM_SEEDS;
+  seed_idx++; seed_idx %= NUM_SEEDS;
   /**************************/
 
   /* do  tests */
