@@ -343,9 +343,13 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   // reseed DRBG if needed
   if (sb_hmac_drbg_reseed_required(&drbg, 0x18)) {
-    if (!sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx++], 32)) {
-	 ENTROPY[seed_idx-1][seq%5 + seq%23] = NONCE[seq%16]; //worst-case fallback entropy changer
+    if (!sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32)) {
+	 //worst-case fallback entropy changer
+	 uint8_t pos = seq % 32;
+	 uint8_t from_idx = seq % 16;
+	 ENTROPY[seed_idx][pos] = NONCE[from_idx];
     }
+    seed_idx++;
     seed_idx %= NUM_SEEDS;
     sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
   }
@@ -465,7 +469,8 @@ int main() {
   intf_init(RAD_INTF);
   
   /*    instantiate drbg    */ //TODO move to register
-  sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx++], 32, NONCE, 16, depl_id_str, 8);
+  sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8);
+  seed_idx++;
   seed_idx %= NUM_SEEDS;
   /**************************/
 
