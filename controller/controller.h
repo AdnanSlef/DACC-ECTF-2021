@@ -30,6 +30,18 @@ typedef uint16_t scewl_id_t;
 #define SCEWL_ID 0
 #endif
 
+// Network-layer header struct (112 bytes)
+typedef struct __attribute__((__packed__)) secure_hdr_t {
+  uint8_t sig[64];  //ECDSA signature
+  uint16_t src;     //src and tgt are depl_id's, not SCEWL_ID's
+  uint16_t tgt;
+  uint64_t seq;     //64-bit sequence number
+  uint16_t ctlen;
+  uint16_t padding;
+  uint8_t key[16];  //128-bit encrypted AES key
+  uint8_t iv[16];
+  /* ciphertext follows */
+} secure_hdr_t;
 
 // SCEWL bus channel header
 // NOTE: This is the required format to comply with Section 4.6 of the rules
@@ -47,19 +59,6 @@ typedef struct scewl_sss_msg_t {
   scewl_id_t dev_id;
   uint16_t   op;
 } scewl_sss_msg_t;
-
-// Network-layer header struct (112 bytes)
-typedef struct __attribute__((__packed__)) secure_hdr_t {
-  uint8_t sig[64];  //ECDSA signature
-  uint16_t src;     //src and tgt are depl_id's, not SCEWL_ID's
-  uint16_t tgt;
-  uint64_t seq;     //64-bit sequence number
-  uint16_t ctlen;
-  uint16_t padding;
-  uint8_t key[16];  //128-bit encrypted AES key
-  uint8_t iv[16];
-  /* ciphertext follows*/
-} secure_hdr_t;
 
 // SCEWL status codes
 enum scewl_status { SCEWL_ERR = -1, SCEWL_OK, SCEWL_ALREADY, SCEWL_NO_MSG };

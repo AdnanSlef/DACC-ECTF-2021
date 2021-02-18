@@ -98,7 +98,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
           }
         } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
       }
-    } while (hdr.magicS != 'S' && hdr.magicC != 'C');
+    } while (hdr.magicS != 'S' || hdr.magicC != 'C');
 
     // read rest of header
     read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
@@ -402,7 +402,11 @@ void test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   uint8_t xorkey[16];
   sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
-  bxor(aeskey, xorkey, 16);//TODO safety check make sure this changes aeskey
+  if (xorkey[0]+xorkey[1]+xorkey[2] == 0) {
+    //we're not masking much; did something go wrong?
+    return SCEWL_ERR;
+  }
+  bxor(aeskey, xorkey, sizeof(aeskey));
 
   debug_str("Encrypted AES key:");
   send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 16, aeskey);
