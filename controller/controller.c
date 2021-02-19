@@ -58,7 +58,7 @@ uint16_t scewl_to_depl(scewl_id_t scewl_id)
     }
   }
   //scewl id not found
-  return DEPL_ID; //TODO make sure this is appropriate
+  return DEPL_ID;
 }
 
 scewl_id_t depl_to_scewl(uint16_t depl_id)
@@ -67,7 +67,7 @@ scewl_id_t depl_to_scewl(uint16_t depl_id)
     return (scewl_id_t)SCEWL_IDS_DB[depl_id];
   }
   else {
-    //should never happen
+    //invalid depl_id
     return (scewl_id_t)SCEWL_ID;
   }
 }
@@ -125,7 +125,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
     }
 
   } while (intf != CPU_INTF && intf != SSS_INTF &&                       // always valid if from CPU or SSS
-           ((hdr.tgt_id == SCEWL_BRDCST_ID && hdr.src_id == SCEWL_ID) || // ignore own broadcast
+           ((/*hdr.tgt_id == SCEWL_BRDCST_ID &&*/ hdr.src_id == SCEWL_ID) || // ignore own broadcast and direct transmissions to self
             (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID))); // ignore direct message to other device
 
   return max;
@@ -299,6 +299,13 @@ int sss_register() {
   if (status == SCEWL_ERR) {
     return 0;
   }
+  
+  /*    instantiate drbg    */
+  if (sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8) != SB_SUCCESS) {
+    return 0;
+  }
+  seed_idx++; seed_idx %= NUM_SEEDS;
+  /**************************/
 
   // op should be REG on success
   return msg.op == SCEWL_SSS_REG;
@@ -341,6 +348,13 @@ int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
     return SCEWL_ERR;
   }
 
+  // don't send message to self
+  uint16_t tgt_depl_id = scewl_to_depl(tgt_scewl_id);
+  if (tgt_depl_id == DEPL_ID) {
+    debug_str("trying to send self message");
+    //return SCEWL_ERR;
+  }
+
   // reseed DRBG if needed
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
@@ -381,7 +395,6 @@ int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /***************************/
 
   /*    establish shared secret    */
-  uint16_t tgt_depl_id = scewl_to_depl(tgt_scewl_id);
   sb_sw_context_t sb_ctx;
   sb_sw_shared_secret_t secret;
   sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
@@ -485,11 +498,11 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   }
 
   // verify source
-  if ( depl_to_scewl(net_hdr->src) != src_scewl_id ) {
+  if ( src_scewl_id == SCEWL_ID || depl_to_scewl(net_hdr->src) != src_scewl_id ) {
     return SCEWL_ERR;
   }
 
-  // validate length
+  // check length
   if ( net_hdr->ctlen != len - sizeof(secure_hdr_t) ) {
     return SCEWL_ERR;
   }
@@ -516,12 +529,14 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   /****************************/
 
   debug_str("Wow, I passed the checks!");
-  /*    check signature    *
-  public = (sb_sw_public_t *)ECC_PUBLICS_DB[DEPL_ID];
-  sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
-  debug_struct(ver_err); //\x00\x01\x00\x00 meaning SB_ERROR_SIGNATURE_INVALID
-  debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
+
+  /*    check signature    */
+  sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[net_hdr->src];
+  //sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  //debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
   /*************************/
+
+  return SCEWL_OK;
 }
 
 int main() {
@@ -533,32 +548,15 @@ int main() {
   intf_init(CPU_INTF);
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
-  
-  /*    instantiate drbg    */ //TODO move to register
-  sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8);
-  seed_idx++; seed_idx %= NUM_SEEDS;
-  /**************************/
 
-  /* do  tests */
-  #ifdef TEST_ECC_B
-  len = 32;
-  bcopy(buf, "A123456789abcdef 123456789abcdeZ", (uint16_t)len);
-  //test_scewl_secure_send(buf, SCEWL_ID==10?11:10, (uint16_t)len);
-  //test_scewl_secure_recv(buf, SCEWL_ID==10?11:10, (uint16_t)len);
-  #endif
-  /* end tests */
-
-  /*   test secrets   */
-  debug_str(depl_id_str);
-  depl_id_str[1] = 0xd0; //Shows that secrets may be modified
-  debug_str(depl_id_str);
-  /* end secrets test */
-
-  /* miscelanious tests */
-  uint16_t mysizedebug = sizeof(secure_hdr_t);
-  debug_str("sizeof(secure_hdr_t)");
-  debug_struct(mysizedebug);
-  /* end miscelainous tests */
+  /*    debug self-sending    */
+  uint16_t debug_scewl_id = SCEWL_ID;
+  uint16_t debug_depl_id = DEPL_ID;
+  debug_str("A");
+  debug_struct(debug_scewl_id);
+  debug_struct(debug_depl_id);
+  debug_str("B");
+  /****************************/
 
   // serve forever
   while (1) {
@@ -586,7 +584,7 @@ int main() {
           handle_faa_send(buf, len);
         } else {
           //handle_scewl_send(buf, tgt_id, len);
-	  test_scewl_secure_send(buf, src_id, len);
+	  test_scewl_secure_send(buf, tgt_id, len);
         }
 
         continue;

@@ -130,6 +130,10 @@ all: ${COMPILER}/sb_sw_lib.o
 endif
 ################# end sweet-b inclusion #################
 
+# Show memory usage (TODO remove)
+LDFLAGS+=--print-memory-usage
+CFLAGS+=-fstack-usage
+CFLAGS+=-Wstack-usage=16384
 
 # this must be the last build rule of `all`
 all: ${COMPILER}/controller.axf
