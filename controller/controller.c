@@ -25,7 +25,7 @@
 #define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
 
 // message buffer
-char buf[SCEWL_MAX_DATA_SZ];
+char buf[SCEWL_MAX_DATA_SZ+sizeof(secure_hdr_t)];
 
 // CSPRNG state
 sb_hmac_drbg_state_t drbg;

@@ -1,5 +1,5 @@
-# 2021 MITRE eCTF Challenge: Secure Common Embedded Wireless Link (SCEWL)
-This repository implements a design for MITRE's 2021 Embedded 
+# 2021 MITRE eCTF Challenge: Secure Common Embedded Wireless Link (SCEWL) by 0xDACC
+This repository implements our team's design for MITRE's 2021 Embedded 
 System CTF (eCTF). This code was designed with security in mind,
 preparing for the attack phase in which opposing teams will
 attempt to exploit our design.
@@ -7,11 +7,11 @@ attempt to exploit our design.
 ## Getting Started
 Please see the [Getting Started Guide](getting_started.md).
 
-Also see the distributed walkthrough slides for a guide to working with and
-running this code.
+Also see the distributed documentation for a guide to the design and
+features of this code.
 
 ## Project Structure
-The example code is structured as follows
+The project code is structured as follows
 
 * `controller/` - Contains everything to build the SCEWL Bus Controller. See [Controller README](controller/README.md)
 * `cpu/` - Contains everything to build the user code of the CPU. See [CPU README](cpu/README.md)
