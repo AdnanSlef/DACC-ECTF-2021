@@ -13,7 +13,7 @@ import Crypto.PublicKey.ECC as ecc
 # CONSTANTS
 DEBUG = 0
 DEPL_COUNT = 256
-NUM_SEEDS = 128
+NUM_SEEDS = 256
 COMMANDS = ["before", "per"]
 
 # Return a different path for debugging purposes
