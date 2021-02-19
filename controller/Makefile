@@ -56,6 +56,10 @@ LDFLAGS+=${COMPILER}/aes.o
 # add compiler flag to enable test AES code 
 CFLAGS+=-DDO_INCLUDE_AES
 
+# disable unused modes of operation
+CFLAGS+=-DCBC=0
+CFLAGS+=-DECB=0
+
 # add rule to build aes library
 all: ${COMPILER}/aes.o
 endif

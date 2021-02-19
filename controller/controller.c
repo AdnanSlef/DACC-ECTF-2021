@@ -261,7 +261,7 @@ int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   uint16_t tgt_depl_id = scewl_to_depl(tgt_scewl_id);
   if (tgt_depl_id == DEPL_ID) {
     debug_str("trying to send self message");
-    //return SCEWL_ERR;
+    return SCEWL_ERR;
   }
 
   // reseed DRBG if needed
@@ -442,8 +442,33 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
 
   /*    check signature    */
   sb_sw_public_t *public = (sb_sw_public_t *)ECC_PUBLICS_DB[net_hdr->src];
-  //sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, &sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
-  //debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
+  uint8_t *xtext = data + sizeof(secure_hdr_t);
+  sb_sw_context_t sb_ctx;
+  sb_sw_message_digest_t hash;
+  sb_sha256_state_t sha;
+
+  sb_sha256_init(&sha);
+  //verify network packet header integrity
+  sb_sha256_update(&sha, (uint8_t *)net_hdr + sizeof(sb_sw_signature_t), sizeof(secure_hdr_t)-sizeof(sb_sw_signature_t));
+  //verify ciphertext integrity
+  sb_sha256_update(&sha, xtext, net_hdr->ctlen);
+  sb_sha256_finish(&sha, &hash);
+
+  sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, net_hdr->sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
+  debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
+  /*************************/
+
+  /*    derive shared secret    */
+  /******************************/
+
+  /*    decrypt aes key    */
+  /*************************/
+
+  /*    decrypt message    */
+  /*************************/
+
+  /*    process message    */
+  KNOWN_SEQS[net_hdr->src] = net_hdr->seq;
   /*************************/
 
   return SCEWL_OK;
