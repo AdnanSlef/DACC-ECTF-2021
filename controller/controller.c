@@ -403,7 +403,7 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   secure_hdr_t *net_hdr = (secure_hdr_t *)data;
   
   // validate input length
-  if (len > SCEWL_MAX_DATA_SZ) {
+  if (len > sizeof(buf)) {
     return SCEWL_ERR;
   }
 
@@ -454,24 +454,53 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   sb_sha256_update(&sha, xtext, net_hdr->ctlen);
   sb_sha256_finish(&sha, &hash);
 
-  sb_error_t ver_err = sb_sw_verify_signature(&sb_ctx, net_hdr->sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1);//TODO handle error
-  debug_str(ver_err==SB_SUCCESS?"Signature Correct":"Signature Failed");
+  //reject packets which fail integrity check
+  if ( sb_sw_verify_signature(&sb_ctx, net_hdr->sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS ) {
+    return SCEWL_ERR;
+  }
   /*************************/
 
   /*    derive shared secret    */
+  sb_sw_shared_secret_t secret;
+  sb_sw_private_t *private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
+
+  if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
+    return SCEWL_ERR;
+  }
+
+  debug_str("recv with shared secret:");
+  debug_struct(secret);
   /******************************/
 
   /*    decrypt aes key    */
+  sb_hkdf_state_t hkdf;
+  uint8_t xorkey[16];
+  //derive xor key from shared secret
+  sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
+  sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
+  //decrypt aes key
+  bxor(net_hdr->key, xorkey, 16);
+
+  debug_str("recvd aes key:");
+  debug_struct(net_hdr->key);
   /*************************/
 
   /*    decrypt message    */
+  struct AES_ctx aes_ctx;
+
+  //initialize AES context
+  AES_init_ctx_iv(&aes_ctx, net_hdr->key, net_hdr->iv);
+
+  //derypt in place
+  AES_CTR_xcrypt_buffer(&aes_ctx, xtext, net_hdr->ctlen);
   /*************************/
 
   /*    process message    */
+  //prevent replay of this or older messages
   KNOWN_SEQS[net_hdr->src] = net_hdr->seq;
+  //pass message to the CPU
+  return send_msg(CPU_INTF, src_scewl_id, SCEWL_ID, net_hdr->ctlen, xtext);
   /*************************/
-
-  return SCEWL_OK;
 }
 
 
