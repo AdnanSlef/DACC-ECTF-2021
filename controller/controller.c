@@ -13,15 +13,11 @@
 #include "controller.h"
 #include "sed.secret.h"
 
-#ifdef TEST_AES
+#ifdef DO_INCLUDE_AES
 #include "aes.h"
 #endif
 
-#ifdef TEST_ECC
-#include "uECC.h"
-#endif
-
-#ifdef TEST_ECC_B
+#ifdef DO_INCLUDE_SB
 #include "sb_all.h"
 #endif
 

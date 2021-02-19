@@ -1,9 +1,6 @@
 [submodule "controller/tiny-AES-c"]
 	path = controller/tiny-AES-c
 	url = https://github.com/kokke/tiny-AES-c.git
-[submodule "controller/micro-ecc"]
-	path = controller/micro-ecc
-	url = https://github.com/kmackay/micro-ecc.git
 [submodule "controller/sweet-b"]
 	path = controller/sweet-b
 	url = https://github.com/westerndigitalcorporation/sweet-b.git

@@ -54,37 +54,12 @@ IPATH+=${AESPATH}
 LDFLAGS+=${COMPILER}/aes.o
 
 # add compiler flag to enable test AES code 
-CFLAGS+=-DTEST_AES
+CFLAGS+=-DDO_INCLUDE_AES
 
 # add rule to build aes library
 all: ${COMPILER}/aes.o
 endif
 ################# end aes inclusion #################
-
-
-################ start uECC inclusion ################
-DO_MAKE_MICRO_ECC=yes
-ifdef DO_MAKE_MICRO_ECC
-
-# path to uECC library
-UECCPATH=./micro-ecc
-
-# add path to uECC source files to source path
-VPATH+=${UECCPATH}
-
-# add uECC library to includes path
-IPATH+=${UECCPATH}
-
-# add uECC object file to includes path
-LDFLAGS+=${COMPILER}/uECC.o
-
-# add compiler flag to enable test uECC code
-CFLAGS+=-DTEST_ECC
-
-# add rule to build uECC library
-all: ${COMPILER}/uECC.o
-endif
-################# end uECC inclusion #################
 
 
 ################ start sweet-b inclusion ################
@@ -103,7 +78,7 @@ IPATH+=${SBPATH}/include
 IPATH+=${SBPATH}/src
 
 # add compiler flag to enable test ECC (B) code
-CFLAGS+=-DTEST_ECC_B
+CFLAGS+=-DDO_INCLUDE_SB
 
 # add compiler flag to allow sweet-b to work on Cortex-M3
 CFLAGS+=-DSB_WORD_SIZE=2
