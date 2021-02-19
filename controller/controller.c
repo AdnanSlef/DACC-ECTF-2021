@@ -152,95 +152,6 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
 }
 
 
-int handle_scewl_recv(char* data, scewl_id_t src_id, uint16_t len) {
-  struct AES_ctx ctx;
-  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
-  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
-  
-  // initialize context
-  AES_init_ctx_iv(&ctx, key, iv);
-  
-  // decrypt buffer (decryption happens in place)
-  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO watch for Defense in Depth
-
-  return send_msg(CPU_INTF, src_id, SCEWL_ID, len, data);
-}
-
-int handle_scewl_send(char* data, scewl_id_t tgt_id, uint16_t len) {
-  struct AES_ctx ctx;
-  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
-  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
-  
-  // initialize context
-  AES_init_ctx_iv(&ctx, key, iv);
-
-  // encrypt buffer (encryption happens in place)
-  AES_CTR_xcrypt_buffer(&ctx, data, len);
-
-  return send_msg(RAD_INTF, SCEWL_ID, tgt_id, len, data);
-}
-
-/*
-int handle_scewl_send_secured(char* data, scewl_id_t tgt_id, uint16_t len) {
-  scewl_hdr_t frame_hdr;
-  secure_hdr_t packet_hdr;
-  uint16_t depl_tgt = !DEPL_ID; //only works in 2-SED mode (TODO use lookup table)
-  uint8_t ss[32]; //shared secret
-  struct AES_ctx ctx;
-  uint8_t key[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf }; //TODO random
-  uint8_t iv[16] = { 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8, 0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 }; //TODO random
-  struct uECC_Curve_t *curve = uECC_secp256r1();
-  
-  // establish shared secret
-  uECC_set_rng(&unsafe_test_rng);//TODO use CSPRNG
-  if (!uECC_shared_secret(ECC_PUBLICS_DB[depl_tgt], ECC_PRIVATE_KEY, ss, curve)) {
-    return SCEWL_ERR;
-  }
-
-  // simple key derivation function
-  //TODO ss = hash(raw_ss);
-
-  // initialize context
-  AES_init_ctx_iv(&ctx, key, iv);
-
-  // encrypt buffer (encryption happens in place)
-  AES_CTR_xcrypt_buffer(&ctx, data, len); //TODO check Defense in Depth
-  
-  // encrypt key with shared secret
-  bxor(key, ss, 16);
-
-  // pack packet header
-  packet_hdr.src = DEPL_ID;
-  packet_hdr.tgt = depl_tgt;
-  packet_hdr.seq = seq++;
-  packet_hdr.ctlen = len;
-  bcopy(packet_hdr.key, key, 16);
-  bcopy(packet_hdr.iv, iv, 16);
-
-  // sign the packet
-  //TODO eccsigbuf = sign(packet)
-  //TODO bcopy(packet_hdr.sig, eccsigbuf, 64);
-  
-  // pack frame header
-  frame_hdr.magicS = 'S';
-  frame_hdr.magicC = 'C';
-  frame_hdr.src_id = SCEWL_ID;
-  frame_hdr.tgt_id = tgt_id;
-  frame_hdr.len    = sizeof(packet_hdr) + packet_hdr.ctlen;
-
-  // send frame header
-  intf_write(RAD_INTF, (char *)&frame_hdr, sizeof(scewl_hdr_t));
-
-  // send packet header
-  intf_write(RAD_INTF, (char *)&packet_hdr, sizeof(secure_hdr_t));
-
-  // send ciphertext
-  intf_write(RAD_INTF, data, len);
-
-  return SCEWL_OK;
-}
-*/
-
 int handle_brdcst_recv(char* data, scewl_id_t src_id, uint16_t len) {
   return send_msg(CPU_INTF, src_id, SCEWL_BRDCST_ID, len, data);
 }
@@ -255,6 +166,7 @@ int handle_brdcst_send(char *data, uint16_t len) {
 int handle_faa_recv(char* data, uint16_t len) {
   return send_msg(CPU_INTF, SCEWL_FAA_ID, SCEWL_ID, len, data);
 }
+
 
 // left unmodified to comply with FAA specifications
 int handle_faa_send(char* data, uint16_t len) {
@@ -339,6 +251,7 @@ int sss_deregister() {
   // op should be DEREG on success
   return msg.op == SCEWL_SSS_DEREG;
 }
+
 
 int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 {
@@ -487,6 +400,7 @@ int test_scewl_secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   return SCEWL_OK;
 }
 
+
 int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
 {
   /*    check for problems    */
@@ -539,6 +453,7 @@ int test_scewl_secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   return SCEWL_OK;
 }
 
+
 int main() {
   int registered = 0, len;
   scewl_hdr_t hdr;
@@ -548,15 +463,6 @@ int main() {
   intf_init(CPU_INTF);
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
-
-  /*    debug self-sending    */
-  uint16_t debug_scewl_id = SCEWL_ID;
-  uint16_t debug_depl_id = DEPL_ID;
-  debug_str("A");
-  debug_struct(debug_scewl_id);
-  debug_struct(debug_depl_id);
-  debug_str("B");
-  /****************************/
 
   // serve forever
   while (1) {
@@ -583,7 +489,6 @@ int main() {
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-          //handle_scewl_send(buf, tgt_id, len);
 	  test_scewl_secure_send(buf, tgt_id, len);
         }
 
@@ -600,7 +505,6 @@ int main() {
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          //handle_scewl_recv(buf, src_id, len);
 	  test_scewl_secure_recv(buf, src_id, len);
         }
       }
