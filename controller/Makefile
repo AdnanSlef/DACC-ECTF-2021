@@ -133,7 +133,8 @@ endif
 # Show memory usage (TODO remove)
 LDFLAGS+=--print-memory-usage
 CFLAGS+=-fstack-usage
-CFLAGS+=-Wstack-usage=16384
+CFLAGS+=-fdump-tree-optimized
+CFLAGS+=-Wstack-usage=1000
 
 # this must be the last build rule of `all`
 all: ${COMPILER}/controller.axf

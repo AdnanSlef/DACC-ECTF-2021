@@ -12,8 +12,8 @@ import Crypto.PublicKey.ECC as ecc
 
 # CONSTANTS
 DEBUG = 0
-DEPL_COUNT = 2 #TODO change
-NUM_SEEDS = 256
+DEPL_COUNT = 256
+NUM_SEEDS = 128
 COMMANDS = ["before", "per"]
 
 # Return a different path for debugging purposes
@@ -46,10 +46,11 @@ def create_secrets_before():
 
 # Prepare one SED's secrets file, by deployment ID
 def make_a_secret(depl_id):
-    privkeys = [b'\tvs\xa2\xb3\xef\xc4\xd7{\xbe\xb1{\xce\xab\x1b\x8cmS\xfd9\x8b\xb4&\x93%\xfa:s\xa3\x89\xe9\xab',b'[\xb6\x8d\x95\xa9\xe8\xd0\x03\xc2\xfcb\x0c\xad\xc8`\xd9\t4>\x05#\xca\x8bMW\x83\xe4w\xa5\xcd7\x81'] #TODO securely generate
+    privkeys = [b'\tvs\xa2\xb3\xef\xc4\xd7{\xbe\xb1{\xce\xab\x1b\x8cmS\xfd9\x8b\xb4&\x93%\xfa:s\xa3\x89\xe9\xab',b'[\xb6\x8d\x95\xa9\xe8\xd0\x03\xc2\xfcb\x0c\xad\xc8`\xd9\t4>\x05#\xca\x8bMW\x83\xe4w\xa5\xcd7\x81'] * (DEPL_COUNT//2)#TODO securely generate
     # Calculate public key points
     pubkeys = [ecc.construct(curve='secp256r1',d=bytes_to_long(privkey)).public_key()._point for privkey in privkeys]
-    pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys] #format for uECC
+    # Pack public keys for use in the Controller
+    pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys]
     entropy = [get_random_bytes(32) for _ in range(NUM_SEEDS)]
     nonce = get_random_bytes(16)
 
