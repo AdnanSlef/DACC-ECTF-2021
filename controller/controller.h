@@ -61,7 +61,6 @@ typedef struct scewl_sss_msg_t {
 } scewl_sss_msg_t;
 
 // SCEWL status codes
-enum scewl_status 
 #define SCEWL_ERR 0
 #define SCEWL_NO_MSG 0
 #define SCEWL_OK 1
