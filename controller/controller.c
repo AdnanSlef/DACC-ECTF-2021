@@ -35,6 +35,21 @@ char buf[SCEWL_MAX_DATA_SZ+sizeof(secure_hdr_t)];
 // CSPRNG state
 sb_hmac_drbg_state_t drbg;
 
+// reseed drbg if needed
+void prep_drbg(void)
+{
+  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
+      //worst-case fallback entropy changer
+      ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
+      ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
+    }
+    seed_idx++; seed_idx %= NUM_SEEDS;
+    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
+  }
+}
+
+
 /*    Utilities    */
 void bxor(uint8_t *buf, const uint8_t *key, uint16_t len)
 {
@@ -299,15 +314,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   }
 
   // reseed DRBG if needed
-  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
-    if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
-      //worst-case fallback entropy changer
-      ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
-      ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
-    }
-    seed_idx++; seed_idx %= NUM_SEEDS;
-    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
-  }
+  prep_drbg();
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     return SCEWL_ERR;
   }
@@ -455,15 +462,7 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   }
   
   // reseed DRBG if needed
-  if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
-    if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
-      //worst-case fallback entropy changer
-      ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
-      ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
-    }
-    seed_idx++; seed_idx %= NUM_SEEDS;
-    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
-  }
+  prep_drbg();
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     return SCEWL_ERR;
   }
