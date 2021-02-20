@@ -1,13 +1,13 @@
 /*
- * 2021 Collegiate eCTF
+ * MITRE 2021 Collegiate eCTF
  * SCEWL Bus Controller implementation
- * Ben Janis
  *
- * (c) 2021 The MITRE Corporation
+ * 0xDACC
+ * Adrian Self
+ * Delaware Area Career Center
  *
- * This source file is part of an example system for MITRE's 2021 Embedded System CTF (eCTF).
- * This code is being provided only for educational purposes for the 2021 MITRE eCTF competition,
- * and may not meet MITRE standards for quality. Use this code at your own risk!
+ * This source file is part of our design for MITRE's 2021 Embedded System CTF (eCTF).
+ * It provides secure networking capabilities to Scewl Enabled Devices including UAVs.
  */
 
 #include "controller.h"
@@ -35,6 +35,7 @@ char buf[SCEWL_MAX_DATA_SZ+sizeof(secure_hdr_t)];
 // CSPRNG state
 sb_hmac_drbg_state_t drbg;
 
+/*    Utilities    */
 void bxor(uint8_t *buf, const uint8_t *key, uint16_t len)
 {
   uint16_t i;
@@ -72,6 +73,8 @@ scewl_id_t depl_to_scewl(uint16_t depl_id)
     return (scewl_id_t)SCEWL_ID;
   }
 }
+/*******************/
+
 
 int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
              size_t n, int blocking) {
@@ -125,10 +128,12 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
       return SCEWL_NO_MSG;
     }
 
-  } while (intf != CPU_INTF && intf != SSS_INTF &&                       // always valid if from CPU or SSS
-           ((/*hdr.tgt_id == SCEWL_BRDCST_ID &&*/ hdr.src_id == SCEWL_ID) || // ignore own broadcast and direct transmissions to self
-            (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID))); // ignore direct message to other device
-
+  } while (intf != CPU_INTF && intf != SSS_INTF &&                    // always valid if from CPU or SSS
+           (hdr.src_id == SCEWL_ID                                    // ignore all radio transmissions from self
+            ||
+            (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID) // ignore direct message to other device
+           )
+          );
   return max;
 }
 
@@ -264,6 +269,8 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   uint8_t iv[16];
   
   sb_sw_context_t sb_ctx;
+  sb_sha256_state_t sha;
+  sb_hkdf_state_t hkdf;
   
   sb_sw_private_t *private;
   sb_sw_public_t *public;
@@ -273,9 +280,6 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   sb_sw_message_digest_t hash;
   sb_sw_shared_secret_t secret;
   sb_sw_signature_t sig;
-  
-  sb_sha256_state_t sha;
-  sb_hkdf_state_t hkdf;
   
   secure_hdr_t net_hdr;
   scewl_hdr_t frame_hdr;
@@ -297,9 +301,9 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   // reseed DRBG if needed
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
-	 //worst-case fallback entropy changer
-	 ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
-	 ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
+      //worst-case fallback entropy changer
+      ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
+      ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
     }
     seed_idx++; seed_idx %= NUM_SEEDS;
     sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
@@ -333,7 +337,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS)
   {
-    return SCEWL_ERR;	  
+    return SCEWL_ERR;
   }
 
   //debug_str("Shared secret:");
@@ -356,9 +360,9 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /*************************/
 
   /*    pack network packet header    */
-  net_hdr.src = DEPL_ID;
-  net_hdr.tgt = tgt_depl_id;
-  net_hdr.seq = seq++;
+  net_hdr.src   = DEPL_ID;
+  net_hdr.tgt   = tgt_depl_id;
+  net_hdr.seq   = seq++;
   net_hdr.ctlen = len;
   bcopy(net_hdr.key, aeskey, 16);
   bcopy(net_hdr.iv, iv, 16);
@@ -366,22 +370,16 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   /*    sign network packet    */
   sb_sha256_init(&sha);
-  //sign network packet header
+  //network packet header
   sb_sha256_update(&sha, (uint8_t *)&net_hdr + sizeof(net_hdr.sig), sizeof(net_hdr)-sizeof(net_hdr.sig));
-  //sign ciphertext
+  //ciphertext
   sb_sha256_update(&sha, data, len);
   sb_sha256_finish(&sha, &hash);
   
-  debug_str("DRBG status before sb_sw_sign_message_digest:");
-  debug_struct(drbg.reseed_counter);
-
   if (sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
     return SCEWL_ERR;
   }
   bcopy(net_hdr.sig, &sig, sizeof(net_hdr.sig));
-
-  debug_str("DRBG status after:");
-  debug_struct(drbg.reseed_counter);
 
   debug_str("Hash:");
   debug_struct(hash);
@@ -459,9 +457,9 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   // reseed DRBG if needed
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
     if (sb_hmac_drbg_generate(&drbg, ENTROPY[seed_idx], 32) != SB_SUCCESS) {
-	 //worst-case fallback entropy changer
-	 ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
-	 ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
+      //worst-case fallback entropy changer
+      ENTROPY[seed_idx][seq%32] = NONCE[seq%16];
+      ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
     }
     seed_idx++; seed_idx %= NUM_SEEDS;
     sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
@@ -562,7 +560,7 @@ int main() {
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-	  secure_direct_send(buf, tgt_id, len);
+          secure_direct_send(buf, tgt_id, len);
         }
 
         continue;
@@ -578,7 +576,7 @@ int main() {
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-	  secure_direct_recv(buf, src_id, len);
+          secure_direct_recv(buf, src_id, len);
         }
       }
     }
