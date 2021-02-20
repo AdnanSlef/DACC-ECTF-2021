@@ -1,14 +1,15 @@
 /*
- * 2021 Collegiate eCTF
+ * MITRE 2021 Collegiate eCTF
  * SCEWL Bus Controller header
- * Ted Clifford
+ * 
+ * 0xDACC
+ * Adrian Self
+ * Delaware Area Career Center
  *
- * (c) 2021 The MITRE Corporation
- *
- * This source file is part of an example system for MITRE's 2021 Embedded System CTF (eCTF).
- * This code is being provided only for educational purposes for the 2021 MITRE eCTF competition,
- * and may not meet MITRE standards for quality. Use this code at your own risk!
+ * This source file is part of our design for MITRE's 2021 Embedded System CTF (eCTF).
+ * It documents and declares the secure networking capabilities of the SCEWL Bus Controller.
  */
+
 
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
@@ -24,10 +25,9 @@
 // type of a SCEWL ID
 typedef uint16_t scewl_id_t;
 
-// SCEWL_ID defined at compile
+// SCEWL_ID must be defined
 #ifndef SCEWL_ID
-#warning SCEWL_ID not defined, using bad default of 0
-#define SCEWL_ID 0
+#error "SCEWL_ID not defined"
 #endif
 
 // Network-layer header struct (112 bytes)
@@ -61,7 +61,11 @@ typedef struct scewl_sss_msg_t {
 } scewl_sss_msg_t;
 
 // SCEWL status codes
-enum scewl_status { SCEWL_ERR = -1, SCEWL_OK, SCEWL_ALREADY, SCEWL_NO_MSG };
+enum scewl_status 
+#define SCEWL_ERR 0
+#define SCEWL_NO_MSG 0
+#define SCEWL_OK 1
+//TODO #define SCEWL_ALREADY
 
 // registration/deregistration options
 enum scewl_sss_op_t { SCEWL_SSS_ALREADY = -1, SCEWL_SSS_REG, SCEWL_SSS_DEREG };
@@ -72,15 +76,18 @@ enum scewl_ids { SCEWL_BRDCST_ID, SCEWL_SSS_ID, SCEWL_FAA_ID };
 /*
  * read_msg
  *
- * Gets a message in the SCEWL pkt format from an interface
+ * Gets a message in the SCEWL frame format from an interface
  *
  * Args:
- *   intf - pointer to the physical interface device
- *   buf - pointer to the message buffer
- *   src_id - pointer to a src_id
- *   tgt_id - pointer to a tgt_id
- *   n - maximum characters to be read into buf
- *   blocking - whether to wait for a message or not
+ *   [in]  intf - pointer to the physical interface device
+ *   [in]  buf - pointer to the message buffer
+ *   [out] src_id - pointer to a src_id
+ *   [out] tgt_id - pointer to a tgt_id
+ *   [in]  n - maximum characters to be read into buf
+ *   [in]  blocking - whether to wait for a message or not
+ * Returns:
+ *   On success, the number of bytes read.
+ *   If no frame was successfully read, SCEWL_NO_MSG.
  */
 int read_msg(intf_t *intf, char *buf, scewl_id_t *src_id, scewl_id_t *tgt_id,
              size_t n, int blocking);
@@ -88,30 +95,63 @@ int read_msg(intf_t *intf, char *buf, scewl_id_t *src_id, scewl_id_t *tgt_id,
 /*
  * send_msg
  * 
- * Sends a message in the SCEWL pkt format to an interface
+ * Sends a message in the SCEWL frame format to an interface
  * 
  * Args:
- *   intf - pointer to the physical interface device
- *   src_id - the id of the sending device
- *   tgt_id - the id of the receiving device
- *   len - the length of message
- *   data - pointer to the message
+ *   [in]  intf - pointer to the physical interface device
+ *   [in]  src_id - the id of the sending device
+ *   [in]  tgt_id - the id of the receiving device
+ *   [in]  len - the length of message
+ *   [in]  data - pointer to the message
+ * Returns:
+ *   SCEWL_OK always
  */
 int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, char *data);
 
 /*
- * handle_scewl_recv
+ * secure_direct_recv
  * 
- * Interprets a SCEWL tranmission from another SED and sends the message to the CPU
+ * Interprets a SCEWL direct tranmission from another SED,
+ * verifying the network packet's authenticity and integrity
+ * and decrypting the message contents.
+ * The sequence number is recorded to prevent replay, then
+ * the message is sent to the CPU in a SCEWL frame.
+ *
+ * Args:
+ *   [in]  data - pointer to incoming network packet
+ *   [in]  src_scewl_id - the id of the sending device
+ *   [in]  len - the length of the network packet
+ * Returns:
+ *   On success, SCEWL_OK.
+ *   On failure, SCEWL_ERR.
+ *     -bad length
+ *     -bad source
+ *     -bad signature
+ *     -expired (low seq number)
+ *     -internal error
  */
-int handle_scewl_recv(char* data, scewl_id_t src_id, uint16_t len);
+int secure_direct_recv(char* data, scewl_id_t src_scewl_id, uint16_t len);
 
 /*
- * handle_scewl_send
+ * secure_direct_send
  * 
- * Sends a message to another SED from the CPU
+ * Sends a direct transmission to another SED from the CPU,
+ * encrypting and signing the message and encapsulating it
+ * into a network packet then into a SCEWL frame.
+ * A sequence number is used so that packets may be ordered.
+ *
+ * Args:
+ *   [in]  data - pointer to message contents
+ *   [in]  tgt_scewl_id - the id of the target device
+ *   [in]  len - the length of the message
+ * Returns:
+ *   On success, SCEWL_OK.
+ *   On failure, SCEWL_ERR.
+ *     -bad length
+ *     -bad target
+ *     -internal error
  */
-int handle_scewl_send(char* buf, scewl_id_t tgt_id, uint16_t len);
+int secure_direct_send(char* data, scewl_id_t tgt_scewl_id, uint16_t len);
 
 /*
  * handle_brdcst_recv
@@ -131,6 +171,12 @@ int handle_brdcst_send(char *data, uint16_t len);
  * handle_faa_recv
  * 
  * Receives an FAA message from the antenna and passes it to the CPU
+ *
+ * Args:
+ *   [in]  data - pointer to FAA message contents
+ *   [in]  len - length of FAA message
+ * Returns:
+ *   SCEWL_OK always
  */
 int handle_faa_recv(char* data, uint16_t len);
 
@@ -138,6 +184,12 @@ int handle_faa_recv(char* data, uint16_t len);
  * handle_faa_send
  * 
  * Sends an FAA message from the CPU to the antenna
+ *
+ * Args:
+ *   [in]  data - pointer to FAA message contents
+ *   [in]  len - length of FAA message
+ * Returns:
+ *   SCEWL_OK always
  */
 int handle_faa_send(char* data, uint16_t len);
 

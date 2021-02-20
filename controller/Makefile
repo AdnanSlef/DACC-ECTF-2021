@@ -1,12 +1,12 @@
-#  2021 Collegiate eCTF
+#  MITRE 2021 Collegiate eCTF
 #  SCEWL Bus Controller Makefile
-#  Ben Janis
 #
-#  (c) 2021 The MITRE Corporation
+#  0xDACC
+#  Adrian Self
+#  Delaware Area Career Center
 #
-# This source file is part of an example system for MITRE's 2021 Embedded System CTF (eCTF).
-# This code is being provided only for educational purposes for the 2021 MITRE eCTF competition,
-# and may not meet MITRE standards for quality. Use this code at your own risk!
+# This source file is part of our design for MITRE's 2021 Embedded System CTF (eCTF).
+# It defines build flags for making the controller binary.
 
 
 # define the part type and base directory - must be defined for makedefs to work
@@ -114,8 +114,6 @@ LDFLAGS+=--print-memory-usage
 CFLAGS+=-fstack-usage
 CFLAGS+=-fdump-tree-optimized
 CFLAGS+=-Wstack-usage=1000
-CFLAGS+=-fverbose-asm
-CFLAGS+=-save-temps
 
 # Optimize for speed
 CFLAGS+=-O2

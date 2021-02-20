@@ -538,7 +538,8 @@ int main() {
   // serve forever
   while (1) {
     // register with SSS
-    read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+    len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+    //TODO continue if len to short (or make sure handle_registration is fine)
 
     if (tgt_id == SCEWL_SSS_ID) {
       registered = handle_registration(buf);
@@ -551,6 +552,7 @@ int main() {
       if (intf_avail(CPU_INTF)) {
         // Read message from CPU
         len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+        if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
           handle_brdcst_send(buf, len);
@@ -569,6 +571,7 @@ int main() {
       if (intf_avail(RAD_INTF)) {
         // Read message from antenna
         len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+        if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
           handle_brdcst_recv(buf, src_id, len);
