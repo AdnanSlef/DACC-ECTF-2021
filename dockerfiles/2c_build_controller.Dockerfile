@@ -7,7 +7,7 @@
 ARG DEPLOYMENT
 
 ###################################################################
-# if you want to copy files from the sss container,               #
+# Since we want to copy files from the sss container,             #
 # first create an intermediate stage:                             #
 #                                                                 #
 FROM ${DEPLOYMENT}/sss:latest as sss                                     
@@ -23,18 +23,21 @@ FROM ${DEPLOYMENT}/controller:base
 ADD . /sed
 
 ###################################################################
-# Copy files from the SSS container                               #
+# Copy secrets from the SSS container                             #
 #                                                                 #
 ARG SCEWL_ID
 COPY --from=sss /secrets/${SCEWL_ID}.secret /sed/sed.secret.h
 #                                                                 #
 ###################################################################
 
-# generate any other secrets and build controller
+###################################################################
+# Build controller                                                #
 WORKDIR /sed
 ARG SCEWL_ID
 RUN make SCEWL_ID=${SCEWL_ID}
+# Move controller binary to root directory                        #
 RUN mv /sed/gcc/controller.bin /controller
+###################################################################
 
 ###################################################################
 # IT IS NOT RECOMMENDED TO KEEP DEPLOYMENT-WIDE SECRETS IN THE    #
@@ -42,10 +45,6 @@ RUN mv /sed/gcc/controller.bin /controller
 #                                                                 #
 # Remove the secrets file                                         #
 RUN rm /sed/sed.secret.h
-# Remove build folder, why not                                    #
-#TODO RUN rm -r /sed/gcc
+# Remove build folder, it isn't needed now                        #
+RUN rm -r /sed/gcc
 ###################################################################
-
-# NOTE: If you want to use the debugger with the scripts we provide, 
-#       the ELF file must be at /controller.elf
-# RUN mv /sed/gcc/controller.axf /controller.elf

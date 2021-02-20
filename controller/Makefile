@@ -114,6 +114,11 @@ LDFLAGS+=--print-memory-usage
 CFLAGS+=-fstack-usage
 CFLAGS+=-fdump-tree-optimized
 CFLAGS+=-Wstack-usage=1000
+CFLAGS+=-fverbose-asm
+CFLAGS+=-save-temps
+
+# Optimize for speed
+CFLAGS+=-O2
 
 # this must be the last build rule of `all`
 all: ${COMPILER}/controller.axf
