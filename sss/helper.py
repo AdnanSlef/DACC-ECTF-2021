@@ -16,27 +16,20 @@ DEPL_COUNT = 256
 NUM_SEEDS = 256
 COMMANDS = ["before", "per"]
 
-# Return a different path for debugging purposes
-def route(name):
-    if DEBUG:
-        return name
-    else:
-        return '/secrets/'+name
-
 # Assign a depl_id secrets file to an SED
 def assign_secrets(SCEWL_ID):
-    with open(route('counter'), 'r') as cf:
+    with open('/secrets/counter', 'r') as cf:
         depl_id = int(cf.read())
-    with open(route('counter'), 'w') as cf:
+    with open('/secrets/counter', 'w') as cf:
         cf.write(str(depl_id+1))
-    with open(route(f"depl_id_{depl_id}"), 'r') as sfile:
-        secrets = sfile.read()
-    with open(route(f"{SCEWL_ID}.secret"),'w') as of:
+    with open(f"/secrets/depl_id_{depl_id}", 'r') as sf:
+        secrets = sf.read()
+    with open(f"/secrets/{SCEWL_ID}.secret",'w') as of:
         of.write(secrets)
 
 # Create a null counter
 def blank_counter():
-    with open(route('counter'), 'w') as cf:
+    with open('/secrets/counter', 'w') as cf:
         cf.write('0')
 
 # Create secrets files:
@@ -90,7 +83,7 @@ uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
 
 #endif //SECRETS_H
 """
-    with open((f"depl_id_{depl_id}" if DEBUG else f"/secrets/depl_id_{depl_id}"), 'w') as sfile:
+    with open(f"/secrets/depl_id_{depl_id}", 'w') as sfile:
         sfile.write(secrets)
 
 def get_args():
@@ -107,9 +100,7 @@ def main():
         blank_counter()
     elif cmd == "per":
         scewl_id = os.environ.get('SCEWL_ID')
-        print('DEBUG: SCEWL_ID',scewl_id)
         assign_secrets(scewl_id)
 
 if __name__ == '__main__':
     main()
-
