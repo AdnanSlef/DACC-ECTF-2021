@@ -45,7 +45,7 @@ void prep_drbg(void)
       ENTROPY[seed_idx][(seq+5)%32] = NONCE[(seq+3)%16];
     }
     seed_idx++; seed_idx %= NUM_SEEDS;
-    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, &seq, 8);
+    sb_hmac_drbg_reseed(&drbg, ENTROPY[seed_idx], 32, (uint8_t *)&seq, 8);
   }
 }
 
@@ -346,7 +346,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /*********************************/
 
   /*    encrypt aes key    */
-  sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
+  sb_hkdf_extract(&hkdf, NULL, 0, (uint8_t *)&secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
   if (xorkey[0]+xorkey[1]+xorkey[2] == 0) {
     //we're not masking much; did something go wrong?
@@ -378,7 +378,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
     //failed to sign network packet
     return SCEWL_ERR;
   }
-  bcopy(net_hdr.sig, &sig, sizeof(net_hdr.sig));
+  bcopy(net_hdr.sig, (uint8_t *)&sig, sizeof(net_hdr.sig));
   /*****************************/
 
   /*    pack frame header    */
@@ -489,7 +489,7 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
 
   /*    decrypt aes key    */
   //derive xor key from shared secret
-  sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
+  sb_hkdf_extract(&hkdf, NULL, 0, (uint8_t *)&secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
   
   //deduce aes key

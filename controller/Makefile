@@ -115,6 +115,9 @@ CFLAGS+=-fstack-usage
 CFLAGS+=-fdump-tree-optimized
 CFLAGS+=-Wstack-usage=1000
 
+# Error on warning (TODO remove)
+#CFLAGS+=-Werror
+
 # Optimize for speed
 CFLAGS+=-O2
 
