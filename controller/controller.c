@@ -8,7 +8,7 @@
  *
  * This source file is part of our design for MITRE's 2021 Embedded System CTF (eCTF).
  * It provides secure networking capabilities to Scewl Enabled Devices including UAVs.
- */
+ /
 
 #include "controller.h"
 #include "sed.secret.h"
