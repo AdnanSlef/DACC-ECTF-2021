@@ -303,19 +303,21 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /*    check for problems    */
   // validate input length
   if (len > SCEWL_MAX_DATA_SZ) {
+    //requested length is too long
     return SCEWL_ERR;
   }
 
   // don't send message to self
   tgt_depl_id = scewl_to_depl(tgt_scewl_id);
   if (tgt_depl_id == DEPL_ID) {
-    debug_str("trying to send self message");
+    //attempted to send message to self
     return SCEWL_ERR;
   }
 
   // reseed DRBG if needed
   prep_drbg();
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    //failed to reseed drbg
     return SCEWL_ERR;
   }
   /****************************/
@@ -330,12 +332,6 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   // encrypt buffer (in-place)
   AES_CTR_xcrypt_buffer(&aes_ctx, data, len);
-
-  debug_str("Random aes key and iv:");
-  debug_struct(aeskey);
-  debug_struct(iv);
-  //debug_str("Ciphertext:");
-  //send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, len, data);
   /***************************/
 
   /*    establish shared secret    */
@@ -344,11 +340,9 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS)
   {
+    //unable to establish shared secret
     return SCEWL_ERR;
   }
-
-  //debug_str("Shared secret:");
-  //send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(secret), &secret);
   /*********************************/
 
   /*    encrypt aes key    */
@@ -361,9 +355,6 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   
   // xor key with aes key
   bxor(aeskey, xorkey, sizeof(aeskey));
-
-  debug_str("Encrypted AES key:");
-  debug_struct(aeskey);
   /*************************/
 
   /*    pack network packet header    */
@@ -384,14 +375,10 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   sb_sha256_finish(&sha, &hash);
   
   if (sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
+    //failed to sign network packet
     return SCEWL_ERR;
   }
   bcopy(net_hdr.sig, &sig, sizeof(net_hdr.sig));
-
-  debug_str("Hash:");
-  debug_struct(hash);
-  debug_str("Non-Deterministic Signature:");
-  debug_struct(sig);
   /*****************************/
 
   /*    pack frame header    */
@@ -443,32 +430,35 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   
   // validate input length
   if (len > sizeof(buf)) {
+    //requested length is too long
     return SCEWL_ERR;
   }
 
   // verify source
   if ( src_scewl_id == SCEWL_ID || depl_to_scewl(net_hdr->src) != src_scewl_id ) {
+    //scewl id does match deployment id
     return SCEWL_ERR;
   }
 
   // check length
   if ( net_hdr->ctlen != len - sizeof(secure_hdr_t) ) {
+    //scewl frame length field not consistent with network packet length field
     return SCEWL_ERR;
   }
 
   // prevent replay
   if ( net_hdr->seq <= KNOWN_SEQS[net_hdr->src] ) {
+    //this network packet is expired or has already been processed
     return SCEWL_ERR;
   }
   
   // reseed DRBG if needed
   prep_drbg();
   if (sb_hmac_drbg_reseed_required(&drbg, 0x20)) {
+    //failed to reseed drbg
     return SCEWL_ERR;
   }
   /****************************/
-
-  debug_str("Wow, I passed the checks!");
 
   /*    check signature    */
   public = (sb_sw_public_t *)ECC_PUBLICS_DB[net_hdr->src];
@@ -483,6 +473,7 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
 
   //reject packets which fail integrity check
   if ( sb_sw_verify_signature(&sb_ctx, net_hdr->sig, public, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS ) {
+    //signature invalid
     return SCEWL_ERR;
   }
   /*************************/
@@ -491,22 +482,18 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
 
   if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
+    //failed to establish shared secret
     return SCEWL_ERR;
   }
-
-  debug_str("recv with shared secret:");
-  debug_struct(secret);
   /******************************/
 
   /*    decrypt aes key    */
   //derive xor key from shared secret
   sb_hkdf_extract(&hkdf, NULL, 0, &secret, sizeof(secret));
   sb_hkdf_expand(&hkdf, NULL, 0, xorkey, sizeof(xorkey));
-  //decrypt aes key
+  
+  //deduce aes key
   bxor(net_hdr->key, xorkey, 16);
-
-  debug_str("recvd aes key:");
-  debug_struct(net_hdr->key);
   /*************************/
 
   /*    decrypt message    */
@@ -520,9 +507,15 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   /*    process message    */
   //prevent replay of this or older messages
   KNOWN_SEQS[net_hdr->src] = net_hdr->seq;
+  
   //pass message to the CPU
-  return send_msg(CPU_INTF, src_scewl_id, SCEWL_ID, net_hdr->ctlen, xtext);
+  send_msg(CPU_INTF, src_scewl_id, SCEWL_ID, net_hdr->ctlen, xtext);
+
+  //clear buffer for future use
+  memset(data, 0, len);
   /*************************/
+
+  return SCEWL_OK;
 }
 
 
