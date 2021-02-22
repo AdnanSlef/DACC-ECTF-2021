@@ -149,7 +149,7 @@ int scewl_recv(char *buf, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
     // check for S
     if (read(sock, &hdr.magicS, 1) < 1) {
-      fprintf(logfp, "Could not find header\n");
+      fprintf(logfp, "%d Could not find header S\n", SCEWL_ID);
       return SCEWL_NO_MSG;
     }
 
@@ -157,7 +157,7 @@ int scewl_recv(char *buf, scewl_id_t *src_id, scewl_id_t *tgt_id,
     if (hdr.magicS == 'S') {
       do {
         if (read(sock, &hdr.magicC, 1) < 1) {
-          fprintf(logfp, "Could not find header\n");
+          fprintf(logfp, "%d Could not find header C\n", SCEWL_ID);
           return SCEWL_NO_MSG;
         }
       } while (hdr.magicC == 'S'); // in case multiple 'S's in a row

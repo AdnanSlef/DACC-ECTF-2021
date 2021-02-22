@@ -13,7 +13,7 @@
 #include "scewl_bus_driver/scewl_bus.h"
 
 #include <stdio.h>
-
+#include <unistd.h>
 
 // SCEWL_ID needs to be defined at compile
 
@@ -52,6 +52,8 @@ int main(void) {
     // print message
     fprintf(log, "***************************\nserver ID: %d\n", SCEWL_ID);
     fprintf(log, "Waiting for message...");
+
+    sleep(5);
 
     // receive message
     len = scewl_recv(data, &src_id, &tgt_id, DLEN, 1);

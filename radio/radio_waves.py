@@ -32,7 +32,7 @@ class ScewlSock:
     SCEWL_MAGIC = b'SC'
     MITM_MAGIC = b'MM'
 
-    def __init__(self, sock_path: str, q_len=1, log_level=logging.INFO, mode=None):
+    def __init__(self, sock_path: str, q_len=1, log_level=logging.DEBUG, mode=None):
         self.sock_path = sock_path
         self.buf = b''
 

@@ -53,7 +53,7 @@ def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
 #define DEPL_BRDCST_ID 0xFFFF
 #define ECC_PUBSIZE 64
 #define ECC_PRIVSIZE 32
-#define SLOTH 16 // seconds to send 0x100 bytes of data
+#define SLOTH 0 // seconds to send 0x100 bytes of data
 #define ONE_SECOND 0x10000000 // iterations needed to wait one second
 #define NUM_SEEDS {NUM_SEEDS}
 uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""

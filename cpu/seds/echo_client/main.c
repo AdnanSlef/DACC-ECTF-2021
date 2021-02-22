@@ -86,7 +86,7 @@ int main(void) {
       return 1;
     }
   }
-
+  
   /* test long message *
   fprintf(log, "Sending long hello...\n");
   gettimeofday(&start, NULL);
@@ -118,19 +118,19 @@ int main(void) {
   /***********************/
 
   /* test short message */
-  fprintf(log, "Sending short hello...\n");
+  fprintf(log, "%d Sending short hello...\n", SCEWL_ID);
   gettimeofday(&start, NULL);
   scewl_send(TGT_ID, 0x100, msg);
 
   // receive response (block until response received)
-  fprintf(log, "Waiting for response...\n");
+  fprintf(log, "%d Waiting for response...\n", SCEWL_ID);
   scewl_recv(data, &src_id, &tgt_id, 0x100, 1);
   gettimeofday(&end, NULL);
   t1 = start.tv_sec + (start.tv_usec/1000000.0);
   t2 = end.tv_sec + (end.tv_usec/1000000.0);
   fprintf(log, data);
   fprintf(log, "\n");
-  fprintf(log, "Time used to send and receive: %f\n", t2-t1);
+  fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
 
   // check if response matches
   if (!strncmp(msg, data, 0x100)) {
