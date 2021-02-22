@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUF_SZ 0x2000
+#define BUF_SZ 0x4000
 
 // SCEWL_ID and TGT_ID need to be defined at compile
 #ifndef TGT_ID
@@ -52,8 +52,16 @@ siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+
 int main(void) {
   scewl_id_t src_id, tgt_id;
   uint16_t len;
-  char *msg = "hello world!";
-  char data[BUF_SZ];
+  char msg[BUF_SZ+1] = "hello to world!~";
+  char data[BUF_SZ+1];
+
+  for (int i=1; i < 0x400; i++) {
+    memcpy(msg+0x10*i, msg, 16);
+  }
+  msg[0] = 'A';
+  msg[BUF_SZ-1] = 'Z';
+  msg[BUF_SZ] = '\x00';
+  data[BUF_SZ] = '\x00';
 
   // open log file
   FILE *log = stderr;
@@ -77,7 +85,7 @@ int main(void) {
   }
 
   fprintf(log, "Sending hello...\n");
-  scewl_send(TGT_ID, 13, msg);
+  scewl_send(TGT_ID, BUF_SZ, msg);
 
   // receive response (block until response received)
   fprintf(log, "Waiting for response...\n");
@@ -86,7 +94,7 @@ int main(void) {
   fprintf(log, "\n");
 
   // check if response matches
-  if (!strcmp(msg, data)) {
+  if (!strncmp(msg, data, BUF_SZ)) {
     // decode and print flag
     uint8_t flag[32] = {0};
     for (int i = 0; flag_as[i]; i++) {
