@@ -44,7 +44,7 @@ RUN mv /sed/gcc/controller.bin /controller
 # SED FILE STRUCTURE PAST BUILDING, SO CLEAN UP HERE AS NECESSARY #
 #                                                                 #
 # Remove the secrets file                                         #
-#TODO RUN rm /sed/sed.secret.h
+RUN rm /sed/sed.secret.h
 # Remove build folder, it isn't needed now                        #
-#TODO RUN rm -r /sed/gcc
+RUN rm -r /sed/gcc
 ###################################################################
