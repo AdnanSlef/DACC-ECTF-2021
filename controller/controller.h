@@ -72,6 +72,22 @@ enum scewl_sss_op_t { SCEWL_SSS_ALREADY = -1, SCEWL_SSS_REG, SCEWL_SSS_DEREG };
 enum scewl_ids { SCEWL_BRDCST_ID, SCEWL_SSS_ID, SCEWL_FAA_ID };
 
 /*
+ * l2_filter
+ *
+ * Filters SCEWL frames read from an interface
+ *
+ * Args:
+ *   [in]  intf - pointer to the physical interface device
+ *   [in]  src_id - SCEWL ID from which the frame purports to be sent
+ *   [in]  tgt_id - SCEWL ID being targeted
+ *
+ * Returns:
+ *   SCEWL_OK if the frame should be processed.
+ *   SCEWL_ERR if the frame should be ignored.
+ */
+_Bool l2_filter(intf_t * intf, scewl_id_t src_id, scewl_id_t tgt_id);
+
+/*
  * read_msg
  *
  * Gets a message in the SCEWL frame format from an interface
@@ -202,6 +218,13 @@ int sss_register();
  */
 int sss_deregister();
 
+/*
+ * prep_drbg
+ *
+ * Attempts to reseed the CSPRNG if necessary
+ *
+ */
+void prep_drbg(void);
 
 #endif
 
