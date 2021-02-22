@@ -335,15 +335,16 @@ int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /*********************************/
 
   /*    just chill    */
-  for (i = 0, n = len / 0x100 + 1; i < n; i++) {
+  for (i = 0, n = len / 0x100 + (len%0x100?1:0); i < n; i++) {
     for (j = 0; j < SLOTH; j++) {
-      for (jj = 0; jj < 0x10000000; jj++) {
+      for (jj = 0; jj < ONE_SECOND; jj++) {
         x ^= 0xC001DACC;
         x += 0xC001DACC;
       }
     }
   }
-  *(uint32_t *)&frame_hdr = x; //try not to get optimized out
+  //make sure this block isn't optimized out
+  *(uint32_t *)&frame_hdr = x;
   /********************/
 
   /*    check for problems    */
