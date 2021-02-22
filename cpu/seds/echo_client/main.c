@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #define BUF_SZ 0x4000
 
@@ -54,6 +55,8 @@ int main(void) {
   uint16_t len;
   char msg[BUF_SZ+1] = "hello to world!~";
   char data[BUF_SZ+1];
+  struct timeval start, end;
+  double t1, t2;
 
   for (int i=1; i < 0x400; i++) {
     memcpy(msg+0x10*i, msg, 16);
@@ -85,13 +88,18 @@ int main(void) {
   }
 
   fprintf(log, "Sending hello...\n");
+  gettimeofday(&start, NULL);
   scewl_send(TGT_ID, BUF_SZ, msg);
 
   // receive response (block until response received)
   fprintf(log, "Waiting for response...\n");
   scewl_recv(data, &src_id, &tgt_id, BUF_SZ, 1);
+  gettimeofday(&end, NULL);
+  t1 = start.tv_sec + (start.tv_usec/1000000.0);
+  t2 = end.tv_sec + (end.tv_usec/1000000.0);
   fprintf(log, data);
   fprintf(log, "\n");
+  fprintf(log, "Time used to send and receive: %f\n", t2-t1);
 
   // check if response matches
   if (!strncmp(msg, data, BUF_SZ)) {

@@ -21,6 +21,7 @@
 #include "sb_all.h"
 #endif
 
+//#define DEBUG_TO_FAA
 #ifdef DEBUG_TO_FAA
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
 #define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
@@ -308,6 +309,8 @@ int sss_deregister() {
 int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 {
   /*    declare local variables    */
+  uint32_t i, j, jj, n, x;
+
   uint16_t tgt_depl_id;
   
   struct AES_ctx aes_ctx;
@@ -330,6 +333,18 @@ int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   secure_hdr_t net_hdr;
   scewl_hdr_t frame_hdr;
   /*********************************/
+
+  /*    just chill    */
+  for (i = 0, n = len / 0x100 + 1; i < n; i++) {
+    for (j = 0; j < SLOTH; j++) {
+      for (jj = 0; jj < 0x10000000; jj++) {
+        x ^= 0xC001DACC;
+        x += 0xC001DACC;
+      }
+    }
+  }
+  *(uint32_t *)&frame_hdr = x; //try not to get optimized out
+  /********************/
 
   /*    check for problems    */
   // validate input length
