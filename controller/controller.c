@@ -94,6 +94,48 @@ scewl_id_t depl_to_scewl(uint16_t depl_id)
 /*******************/
 
 
+_Bool l2_filter(intf_t * intf, scewl_id_t src_id, scewl_id_t tgt_id) {
+
+  if (intf == SSS_INTF) {
+    // always valid if from SSS
+    return SCEWL_OK;
+  }
+
+  if (intf == CPU_INTF) {
+    if (src_id != SCEWL_ID) {
+      // don't impersonate or forward from other SEDs
+      return SCEWL_ERR;
+    }
+    if (tgt_id == SCEWL_ID) {
+      // don't send yourself a message
+      return SCEWL_ERR;
+    }
+    // valid frame from CPU interface
+    return SCEWL_OK;
+  }
+
+  if (intf == RAD_INTF) {
+    if (src_id == SCEWL_ID) {
+      // ignore all radio transmissions from self
+      return SCEWL_ERR;
+    }
+    if (src_id == SCEWL_BRDCST_ID) {
+      // broadcast is not a valid source
+      return SCEWL_ERR;
+    }
+    if (tgt_id != SCEWL_BRDCST_ID && tgt_id != SCEWL_ID) {
+      // ignore direct messages to other SEDs
+      return SCEWL_ERR;
+    }
+    // valid frame from radio interface
+    return SCEWL_OK;
+  }
+
+  // unknown interface
+  return SCEWL_ERR;
+}
+
+
 int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
              size_t n, int blocking) {
   scewl_hdr_t hdr;
@@ -146,19 +188,11 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
       return SCEWL_NO_MSG;
     }
 
-  } while (intf != CPU_INTF && intf != SSS_INTF &&                      // always valid if from CPU or SSS
-            (hdr.src_id == SCEWL_ID                                     // ignore all radio transmissions from self
-              ||
-              (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID) // ignore direct message to other device
-              ||
-              hdr.src_id == SCEWL_BRDCST_ID                             // broadcast is not a valid source
-              ||
-              (hdr.src_id == SCEWL_FAA_ID && hdr.tgt_id != SCEWL_ID)    // only process FAA messages intended for this device
-            )
-          );
+  } while (!l2_filter(intf, hdr.src_id, hdr.tgt_id));
+  
+  // return the length read
   return max;
 }
-
 
 int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, char *data) {
   scewl_hdr_t hdr;
@@ -545,7 +579,7 @@ int main() {
       registered = handle_registration(buf);
     }
 
-    // server while registered
+    // serve while registered
     while (registered) {
 
       // handle outgoing message from CPU
@@ -574,6 +608,9 @@ int main() {
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
+          if (src_id == SCEWL_FAA_ID) {
+            handle_faa_recv(buf, len);
+          }
           secure_recv(buf, src_id, len, 1);
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
