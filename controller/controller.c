@@ -492,7 +492,7 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool 
 
   /*    derive shared secret    */
   if (broadcast) {
-    private = (sb_sw_private_t *)BRDCAST_PRIVATE_KEY;
+    private = (sb_sw_private_t *)BRDCST_PRIVATE_KEY;
   }
   else {
     private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
@@ -584,11 +584,11 @@ int main() {
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          secure_direct_recv(buf, src_id, len, true);
+          secure_direct_recv(buf, src_id, len, 1);
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          secure_direct_recv(buf, src_id, len, false);
+          secure_direct_recv(buf, src_id, len, 0);
         }
       }
     }

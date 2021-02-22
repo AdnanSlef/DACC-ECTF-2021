@@ -23,15 +23,22 @@ def create_secrets_before():
     # Calculate public key points
     pubkeys = [ecc.construct(curve='secp256r1',d=privkey.d).public_key()._point for privkey in privkeys]
 
+    # Generate broadcast keys
+    brdcst_privkey = ecc.generate(curve='secp256r1')
+    brdcst_public = ecc.construct(curve='secp256r1',d=brdcst_privkey.d).public_key()._point
+    brdcst_keys = [brdcst_privkey,brdcst_public]
+
     # Generate secrets for each depl_id
     for depl_id in range(DEPL_COUNT):
-        make_a_secret(depl_id, privkeys[depl_id], pubkeys)
+        make_a_secret(depl_id, privkeys[depl_id], pubkeys, brdcst_keys)
 
 # Prepare one SED's secrets file, by deployment ID
-def make_a_secret(depl_id, privkey, pubkeys):
+def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
     # Pack keys for use in the Controller
-    pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys]
     privkey = long_to_bytes(privkey.d)
+    pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys]
+    brdcst_privkey = long_to_bytes(brdcst_keys[0].d)
+    brdcst_public = long_to_bytes(brdcst_keys[1].x) + long_to_bytes(brdcst_keys[1].y)
     
     # Provide a source of randomness
     entropy = [get_random_bytes(32) for _ in range(NUM_SEEDS)]
@@ -43,6 +50,7 @@ def make_a_secret(depl_id, privkey, pubkeys):
 
 /**** Public, deployment-wide info ****/
 #define DEPL_COUNT {DEPL_COUNT}
+#define DEPL_BRDCST_ID 0xFFFF
 #define ECC_PUBSIZE 64
 #define ECC_PRIVSIZE 32
 #define NUM_SEEDS {NUM_SEEDS}
@@ -52,6 +60,8 @@ uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
               {{ {', '.join(hex(b)for b in pubkey)} }},"""
     secrets += f"""
 }};
+uint8_t BRDCST_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in brdcst_privkey)} }};
+uint8_t BRDCST_PUBLIC[ECC_PUBSIZE] = {{ {', '.join(hex(b)for b in brdcst_public)} }};
 uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
 /**************************************/
 

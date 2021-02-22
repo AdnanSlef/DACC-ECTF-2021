@@ -120,6 +120,7 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
  *   [in]  data - pointer to incoming network packet
  *   [in]  src_scewl_id - the id of the sending device
  *   [in]  len - the length of the network packet
+ *   [in]  broadcast - whether the received frame was a broadcast
  * Returns:
  *   On success, SCEWL_OK.
  *   On failure, SCEWL_ERR.
@@ -129,7 +130,7 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
  *     -expired (low seq number)
  *     -internal error
  */
-int secure_direct_recv(char* data, scewl_id_t src_scewl_id, uint16_t len);
+int secure_direct_recv(char* data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast);
 
 /*
  * secure_direct_send
