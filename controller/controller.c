@@ -180,16 +180,6 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
 }
 
 
-int handle_brdcst_recv(char *data, scewl_id_t src_id, uint16_t len) {
-  return send_msg(CPU_INTF, src_id, SCEWL_BRDCST_ID, len, data);
-}
-
-
-int handle_brdcst_send(char *data, uint16_t len) {
-  return send_msg(RAD_INTF, SCEWL_ID, SCEWL_BRDCST_ID, len, data);
-}   
-
-
 // left unmodified to comply with FAA specifications
 int handle_faa_recv(char *data, uint16_t len) {
   return send_msg(CPU_INTF, SCEWL_FAA_ID, SCEWL_ID, len, data);
@@ -281,7 +271,7 @@ int sss_deregister() {
 }
 
 
-int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
+int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 {
   /*    declare local variables    */
   uint16_t tgt_depl_id;
@@ -416,7 +406,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 }
 
 
-int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast)
+int secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast)
 {
   /*    declare local variables    */
   secure_hdr_t *net_hdr;
@@ -565,13 +555,13 @@ int main() {
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          secure_direct_send(buf, tgt_id, len);
+          secure_send(buf, tgt_id, len);
         } else if (tgt_id == SCEWL_SSS_ID) {
           registered = handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-          secure_direct_send(buf, tgt_id, len);
+          secure_send(buf, tgt_id, len);
         }
 
         continue;
@@ -584,11 +574,11 @@ int main() {
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          secure_direct_recv(buf, src_id, len, 1);
+          secure_recv(buf, src_id, len, 1);
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          secure_direct_recv(buf, src_id, len, 0);
+          secure_recv(buf, src_id, len, 0);
         }
       }
     }

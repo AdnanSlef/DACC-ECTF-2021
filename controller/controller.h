@@ -64,7 +64,6 @@ typedef struct scewl_sss_msg_t {
 #define SCEWL_ERR 0
 #define SCEWL_NO_MSG 0
 #define SCEWL_OK 1
-//TODO #define SCEWL_ALREADY
 
 // registration/deregistration options
 enum scewl_sss_op_t { SCEWL_SSS_ALREADY = -1, SCEWL_SSS_REG, SCEWL_SSS_DEREG };
@@ -108,9 +107,9 @@ int read_msg(intf_t *intf, char *buf, scewl_id_t *src_id, scewl_id_t *tgt_id,
 int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, char *data);
 
 /*
- * secure_direct_recv
+ * secure_recv
  * 
- * Interprets a SCEWL direct tranmission from another SED,
+ * Interprets a SCEWL tranmission from another SED,
  * verifying the network packet's authenticity and integrity
  * and decrypting the message contents.
  * The sequence number is recorded to prevent replay, then
@@ -130,12 +129,12 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
  *     -expired (low seq number)
  *     -internal error
  */
-int secure_direct_recv(char* data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast);
+int secure_recv(char* data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast);
 
 /*
- * secure_direct_send
+ * secure_send
  * 
- * Sends a direct transmission to another SED from the CPU,
+ * Sends a transmission to another SED from the CPU,
  * encrypting and signing the message and encapsulating it
  * into a network packet then into a SCEWL frame.
  * A sequence number is used so that packets may be ordered.
@@ -151,21 +150,7 @@ int secure_direct_recv(char* data, scewl_id_t src_scewl_id, uint16_t len, _Bool 
  *     -bad target
  *     -internal error
  */
-int secure_direct_send(char* data, scewl_id_t tgt_scewl_id, uint16_t len);
-
-/*
- * handle_brdcst_recv
- * 
- * Interprets a broadcast message from another SED and passes it to the CPU
- */
-int handle_brdcst_recv(char* data, scewl_id_t src_id, uint16_t len);
-
-/*
- * handle_brdcst_send
- * 
- * Broadcasts a message from the CPU to SEDS over the antenna
- */
-int handle_brdcst_send(char *data, uint16_t len);
+int secure_send(char* data, scewl_id_t tgt_scewl_id, uint16_t len);
 
 /*
  * handle_faa_recv
