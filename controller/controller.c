@@ -69,6 +69,9 @@ void bcopy(uint8_t *dst, const uint8_t *src, uint16_t len)
 
 uint16_t scewl_to_depl(scewl_id_t scewl_id)
 {
+  if (scewl_id == SCEWL_BRDCST_ID) {
+    return DEPL_BRDCST_ID;
+  }
   for (uint16_t i=0; i<DEPL_COUNT; i++) {
     if (SCEWL_IDS_DB[i] == scewl_id) {
       return i;
@@ -143,11 +146,15 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
       return SCEWL_NO_MSG;
     }
 
-  } while (intf != CPU_INTF && intf != SSS_INTF &&                    // always valid if from CPU or SSS
-           (hdr.src_id == SCEWL_ID                                    // ignore all radio transmissions from self
-            ||
-            (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID) // ignore direct message to other device
-           )
+  } while (intf != CPU_INTF && intf != SSS_INTF &&                      // always valid if from CPU or SSS
+            (hdr.src_id == SCEWL_ID                                     // ignore all radio transmissions from self
+              ||
+              (hdr.tgt_id != SCEWL_BRDCST_ID && hdr.tgt_id != SCEWL_ID) // ignore direct message to other device
+              ||
+              hdr.src_id == SCEWL_BRDCST_ID                             // broadcast is not a valid source
+              ||
+              (hdr.src_id == SCEWL_FAA_ID && hdr.tgt_id != SCEWL_ID)    // only process FAA messages intended for this device
+            )
           );
   return max;
 }
@@ -173,7 +180,7 @@ int send_msg(intf_t *intf, scewl_id_t src_id, scewl_id_t tgt_id, uint16_t len, c
 }
 
 
-int handle_brdcst_recv(char* data, scewl_id_t src_id, uint16_t len) {
+int handle_brdcst_recv(char *data, scewl_id_t src_id, uint16_t len) {
   return send_msg(CPU_INTF, src_id, SCEWL_BRDCST_ID, len, data);
 }
 
@@ -184,18 +191,18 @@ int handle_brdcst_send(char *data, uint16_t len) {
 
 
 // left unmodified to comply with FAA specifications
-int handle_faa_recv(char* data, uint16_t len) {
+int handle_faa_recv(char *data, uint16_t len) {
   return send_msg(CPU_INTF, SCEWL_FAA_ID, SCEWL_ID, len, data);
 }
 
 
 // left unmodified to comply with FAA specifications
-int handle_faa_send(char* data, uint16_t len) {
+int handle_faa_send(char *data, uint16_t len) {
   return send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, len, data);
 }
 
 
-int handle_registration(char* msg) {
+int handle_registration(char *msg) {
   scewl_sss_msg_t *sss_msg = (scewl_sss_msg_t *)msg;
   if (sss_msg->op == SCEWL_SSS_REG) {
     return sss_register();
@@ -336,7 +343,12 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 
   /*    establish shared secret    */
   private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
-  public = (sb_sw_public_t *)ECC_PUBLICS_DB[tgt_depl_id];
+  if (tgt_depl_id == DEPL_BRDCST_ID) {
+    public = (sb_sw_public_t *)BRDCST_PUBLIC;
+  }
+  else {
+    public = (sb_sw_public_t *)ECC_PUBLICS_DB[tgt_depl_id];
+  }
 
   if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS)
   {
@@ -404,7 +416,7 @@ int secure_direct_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
 }
 
 
-int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
+int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadcast)
 {
   /*    declare local variables    */
   secure_hdr_t *net_hdr;
@@ -436,7 +448,7 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
 
   // verify source
   if ( src_scewl_id == SCEWL_ID || depl_to_scewl(net_hdr->src) != src_scewl_id ) {
-    //scewl id does match deployment id
+    //scewl id does not match deployment id
     return SCEWL_ERR;
   }
 
@@ -479,7 +491,12 @@ int secure_direct_recv(char *data, scewl_id_t src_scewl_id, uint16_t len)
   /*************************/
 
   /*    derive shared secret    */
-  private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
+  if (broadcast) {
+    private = (sb_sw_private_t *)BRDCAST_PRIVATE_KEY;
+  }
+  else {
+    private = (sb_sw_private_t *)ECC_PRIVATE_KEY;
+  }
 
   if(sb_sw_shared_secret(&sb_ctx, &secret, private, public, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
     //failed to establish shared secret
@@ -548,7 +565,7 @@ int main() {
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          handle_brdcst_send(buf, len);
+          secure_direct_send(buf, tgt_id, len);
         } else if (tgt_id == SCEWL_SSS_ID) {
           registered = handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
@@ -567,11 +584,11 @@ int main() {
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          handle_brdcst_recv(buf, src_id, len);
+          secure_direct_recv(buf, src_id, len, true);
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          secure_direct_recv(buf, src_id, len);
+          secure_direct_recv(buf, src_id, len, false);
         }
       }
     }
