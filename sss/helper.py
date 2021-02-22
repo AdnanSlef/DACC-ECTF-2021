@@ -11,39 +11,29 @@ from Crypto.Random import get_random_bytes
 import Crypto.PublicKey.ECC as ecc
 
 # CONSTANTS
-DEBUG = 0
 DEPL_COUNT = 256
 NUM_SEEDS = 256
 COMMANDS = ["before", "per"]
 
-# Assign a depl_id secrets file to an SED
-def assign_secrets(SCEWL_ID):
-    with open('/secrets/counter', 'r') as cf:
-        depl_id = int(cf.read())
-    with open('/secrets/counter', 'w') as cf:
-        cf.write(str(depl_id+1))
-    with open(f"/secrets/depl_id_{depl_id}", 'r') as sf:
-        secrets = sf.read()
-    with open(f"/secrets/{SCEWL_ID}.secret",'w') as of:
-        of.write(secrets)
-
-# Create a null counter
-def blank_counter():
-    with open('/secrets/counter', 'w') as cf:
-        cf.write('0')
-
 # Create secrets files:
 def create_secrets_before():
+    # Generate private keys
+    privkeys = [ecc.generate(curve='secp256r1') for _ in range(DEPL_COUNT)]
+
+    # Calculate public key points
+    pubkeys = [ecc.construct(curve='secp256r1',d=privkey.d).public_key()._point for privkey in privkeys]
+
+    # Generate secrets for each depl_id
     for depl_id in range(DEPL_COUNT):
-        make_a_secret(depl_id)
+        make_a_secret(depl_id, privkeys[depl_id], pubkeys)
 
 # Prepare one SED's secrets file, by deployment ID
-def make_a_secret(depl_id):
-    privkeys = [b'\tvs\xa2\xb3\xef\xc4\xd7{\xbe\xb1{\xce\xab\x1b\x8cmS\xfd9\x8b\xb4&\x93%\xfa:s\xa3\x89\xe9\xab',b'[\xb6\x8d\x95\xa9\xe8\xd0\x03\xc2\xfcb\x0c\xad\xc8`\xd9\t4>\x05#\xca\x8bMW\x83\xe4w\xa5\xcd7\x81'] * (DEPL_COUNT//2)#TODO securely generate
-    # Calculate public key points
-    pubkeys = [ecc.construct(curve='secp256r1',d=bytes_to_long(privkey)).public_key()._point for privkey in privkeys]
-    # Pack public keys for use in the Controller
+def make_a_secret(depl_id, privkey, pubkeys):
+    # Pack keys for use in the Controller
     pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys]
+    privkey = long_to_bytes(privkey.d)
+    
+    # Provide a source of randomness
     entropy = [get_random_bytes(32) for _ in range(NUM_SEEDS)]
     nonce = get_random_bytes(16)
 
@@ -62,7 +52,7 @@ uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
               {{ {', '.join(hex(b)for b in pubkey)} }},"""
     secrets += f"""
 }};
-uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{10,11}};//TODO populated at registration
+uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
 /**************************************/
 
 /**** Secrets & info specific to this SED ****/
@@ -70,7 +60,7 @@ uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{10,11}};//TODO populated at registration
 uint64_t seq = 1;
 uint16_t seed_idx = 0;
 char depl_id_str[8] = "{depl_id}";
-uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkeys[depl_id])} }};
+uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkey)} }};
 uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
 uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     for seed in entropy:
@@ -83,8 +73,25 @@ uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
 
 #endif //SECRETS_H
 """
-    with open(f"/secrets/depl_id_{depl_id}", 'w') as sfile:
-        sfile.write(secrets)
+
+    with open(f"/secrets/depl_id_{depl_id}", 'w') as sf:
+        sf.write(secrets)
+
+# Create a null counter
+def blank_counter():
+    with open('/secrets/counter', 'w') as cf:
+        cf.write('0')
+
+# Assign a depl_id secrets file to an SED
+def assign_secrets(SCEWL_ID):
+    with open('/secrets/counter', 'r') as cf:
+        depl_id = int(cf.read())
+    with open('/secrets/counter', 'w') as cf:
+        cf.write(str(depl_id+1))
+    with open(f"/secrets/depl_id_{depl_id}", 'r') as sf:
+        secrets = sf.read()
+    with open(f"/secrets/{SCEWL_ID}.secret",'w') as of:
+        of.write(secrets)
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -96,9 +103,11 @@ def main():
     cmd = get_args().cmd[0].strip()
     
     if cmd == "before":
+        #prepare deployment
         create_secrets_before()
         blank_counter()
     elif cmd == "per":
+        #add an SED
         scewl_id = os.environ.get('SCEWL_ID')
         assign_secrets(scewl_id)
 
