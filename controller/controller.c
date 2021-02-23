@@ -21,7 +21,9 @@
 #include "sb_all.h"
 #endif
 
-//#define DEBUG_TO_FAA
+#if SCEWL_ID == 10
+#define DEBUG_TO_FAA
+#endif
 #ifdef DEBUG_TO_FAA
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
 #define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
@@ -142,59 +144,62 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
   scewl_hdr_t hdr;
   int read, max;
 
+  // clear buffer and header
+  memset(&hdr, 0, sizeof(hdr));
+  memset(data, 0, n);
+
+  /* find header start */
   do {
-    // clear buffer and header
-    memset(&hdr, 0, sizeof(hdr));
-    memset(data, 0, n);
-
-    // find header start
-    do {
-      debug_struct(hdr);
-      hdr.magicC = 0;
-
-      if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
-        return SCEWL_NO_MSG;
-      }
-
-      // check for SC
-      if (hdr.magicS == 'S') {
-        do {//TODO remove debug
-          debug_str("^ trying to read magic C");
-          if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
-            return SCEWL_NO_MSG;
-          }
-        } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
-      }
-    } while (hdr.magicS != 'S' || hdr.magicC != 'C');
-
-    // read rest of header
-    debug_str("trying to read rest of header");
-    read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
-    if(read == INTF_NO_DATA) {
+    hdr.magicC = 0;
+  
+    if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
       return SCEWL_NO_MSG;
     }
-    debug_struct(hdr);
-
-    // unpack header
-    *src_id = hdr.src_id;
-    *tgt_id = hdr.tgt_id;
-
-    // read body
-    max = hdr.len < n ? hdr.len : n;
-    read = intf_read(intf, data, max, blocking);
-
-    // throw away rest of message if too long
-    for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
-      intf_readb(intf, 0);
+  
+    // check for SC
+    if (hdr.magicS == 'S') {
+      do {
+        debug_str("^ trying to read magic C");
+        if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
+          return SCEWL_NO_MSG;
+        }
+      } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
     }
+    
+  } while (hdr.magicS != 'S' || hdr.magicC != 'C');
 
-    // report if not blocking and full message not received
-    if(read == INTF_NO_DATA || read < max) {
-      return SCEWL_NO_MSG;
-    }
+  /*********************/
 
-  } while (0);
+  // read rest of header
+  debug_str("trying to read rest of header");
+  read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
+  if(read == INTF_NO_DATA) {
+    return SCEWL_NO_MSG;
+  }
+  debug_struct(hdr);
 
+  // unpack header
+  *src_id = hdr.src_id;
+  *tgt_id = hdr.tgt_id;
+
+  // read body
+  max = hdr.len < n ? hdr.len : n;
+  read = intf_read(intf, data, max, blocking);
+  debug_str("read:");
+  debug_struct(read);
+
+  // throw away rest of message if too long
+  for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
+    if (i == 0) {i = hdr.len - max; debug_str("extra bytes:"); debug_struct(i); i=0;}
+    intf_readb(intf, 0);
+  }
+
+  // report if not blocking and full message not received
+  if(read == INTF_NO_DATA || read < max) {
+    return SCEWL_NO_MSG;
+  }
+
+  // filter out unwanted frames
   if (!l2_filter(intf, hdr.src_id, hdr.tgt_id)) {
     debug_str("filtering scewl frame");
     return SCEWL_NO_MSG;
@@ -609,14 +614,16 @@ int main() {
 
       // handle outgoing message from CPU
       if (intf_avail(CPU_INTF)) {
+        debug_str("CPU_INTF was avail");
         // Read message from CPU
-        len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+        len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 0);
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
           if(!secure_send(buf, tgt_id, len)) {
             debug_str("failed to secure broadcast");
           }
+          else {debug_str("successful secure brdcst");}
         } else if (tgt_id == SCEWL_SSS_ID) {
           registered = handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
@@ -625,6 +632,7 @@ int main() {
           if (!secure_send(buf, tgt_id, len)) {
             debug_str("failed to secure direct transmit");
           }
+          else {debug_str("successful secure direct transmit");}
         }
 
         continue;
@@ -632,8 +640,9 @@ int main() {
 
       // handle incoming radio message
       if (intf_avail(RAD_INTF)) {
+        debug_str("RAD_INTF was avail");
         // Read message from antenna
-        len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
+        len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 0);
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
@@ -643,12 +652,14 @@ int main() {
           if (!secure_recv(buf, src_id, len, 1)) {
             debug_str("failed to secure broadcast recv");
           }
+          else {debug_str("successful secure brdcst recv");}
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
           if (!secure_recv(buf, src_id, len, 0)) {
             debug_str("failed to secure direct recv");
           }
+          else {debug_str("successful secure direct recv");}
         }
       }
     }

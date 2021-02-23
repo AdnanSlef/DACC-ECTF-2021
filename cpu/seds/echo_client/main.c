@@ -53,7 +53,7 @@ siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+
 
 int main(void) {
   scewl_id_t src_id, tgt_id;
-  uint16_t len = 0x2000;
+  uint16_t len = 0x4000;
   char msg[BUF_SZ+1] = "hello to world!~";
   char data[BUF_SZ+1];
   struct timeval start, end;
@@ -63,9 +63,9 @@ int main(void) {
     memcpy(msg+0x10*i, msg, 16);
   }
   msg[0] = 'A';
-  msg[BUF_SZ-1] = 'Z';
-  msg[BUF_SZ] = '\x00';
-  data[BUF_SZ] = '\x00';
+  msg[len-1] = 'Z';
+  msg[len] = '\x00';
+  data[len] = '\x00';
 
   // open log file
   FILE *log = stderr;
@@ -90,6 +90,7 @@ int main(void) {
   }
   
   //sleep(10 * (SCEWL_ID-10));
+  sleep(3);
 
   /* test message of length len */
   fprintf(log, "%d Sending %xB hello...\n", SCEWL_ID, len);
@@ -102,7 +103,7 @@ int main(void) {
   gettimeofday(&end, NULL);
   t1 = start.tv_sec + (start.tv_usec/1000000.0);
   t2 = end.tv_sec + (end.tv_usec/1000000.0);
-  fprintf(log, data);
+  fprintf(log, "%s", data);
   fprintf(log, "\n");
   fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
 
@@ -120,9 +121,6 @@ int main(void) {
     fprintf(log, "Bad response!\n");
   }
   /***********************/
-
-
-  //sleep(1000);
 
   // deregister
   fprintf(log, "Deregistering %d...\n", SCEWL_ID);
