@@ -58,17 +58,14 @@ make launch_sed_d NAME=echo_client SCEWL_ID=11
 make launch_sed_d NAME=echo_client SCEWL_ID=12
 make launch_sed_d NAME=echo_client SCEWL_ID=13
 make launch_sed_d NAME=echo_client SCEWL_ID=14
-sleep 1
 make launch_sed_d NAME=echo_client SCEWL_ID=15
 make launch_sed_d NAME=echo_client SCEWL_ID=16
 make launch_sed_d NAME=echo_client SCEWL_ID=17
 make launch_sed_d NAME=echo_client SCEWL_ID=18
-sleep 1
 make launch_sed_d NAME=echo_client SCEWL_ID=19
 make launch_sed_d NAME=echo_client SCEWL_ID=20
 make launch_sed_d NAME=echo_client SCEWL_ID=21
 make launch_sed_d NAME=echo_client SCEWL_ID=22
-sleep 1
 make launch_sed_d NAME=echo_client SCEWL_ID=23
 make launch_sed_d NAME=echo_client SCEWL_ID=24
 make launch_sed_d NAME=echo_client SCEWL_ID=25

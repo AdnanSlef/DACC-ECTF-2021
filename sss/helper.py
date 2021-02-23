@@ -11,6 +11,8 @@ from Crypto.Random import get_random_bytes
 import Crypto.PublicKey.ECC as ecc
 
 # CONSTANTS
+ECC_PRIVSIZE = 32
+ECC_PUBSIZE = ECC_PRIVSIZE * 2
 DEPL_COUNT = 256
 NUM_SEEDS = 256
 COMMANDS = ["before", "per"]
@@ -35,10 +37,10 @@ def create_secrets_before():
 # Prepare one SED's secrets file, by deployment ID
 def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
     # Pack keys for use in the Controller
-    privkey = long_to_bytes(privkey.d)
-    pubkeys = [long_to_bytes(point.x) + long_to_bytes(point.y) for point in pubkeys]
-    brdcst_privkey = long_to_bytes(brdcst_keys[0].d)
-    brdcst_public = long_to_bytes(brdcst_keys[1].x) + long_to_bytes(brdcst_keys[1].y)
+    privkey = long_to_bytes(privkey.d, ECC_PRIVSIZE)
+    pubkeys = [long_to_bytes(point.x, ECC_PRIVSIZE) + long_to_bytes(point.y, ECC_PRIVSIZE) for point in pubkeys]
+    brdcst_privkey = long_to_bytes(brdcst_keys[0].d, ECC_PRIVSIZE)
+    brdcst_public = long_to_bytes(brdcst_keys[1].x, ECC_PRIVSIZE) + long_to_bytes(brdcst_keys[1].y, ECC_PRIVSIZE)
     
     # Provide a source of randomness
     entropy = [get_random_bytes(32) for _ in range(NUM_SEEDS)]
@@ -51,8 +53,8 @@ def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
 /**** Public, deployment-wide info ****/
 #define DEPL_COUNT {DEPL_COUNT}
 #define DEPL_BRDCST_ID 0xFFFF
-#define ECC_PUBSIZE 64
-#define ECC_PRIVSIZE 32
+#define ECC_PUBSIZE {ECC_PUBSIZE}
+#define ECC_PRIVSIZE {ECC_PRIVSIZE}
 #define SLOTH 0 // seconds to send 0x100 bytes of data
 #define ONE_SECOND 0x10000000 // iterations needed to wait one second
 #define NUM_SEEDS {NUM_SEEDS}

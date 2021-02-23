@@ -37,6 +37,9 @@ ARG SCEWL_ID
 RUN make SCEWL_ID=${SCEWL_ID}
 # Move controller binary to root directory                        #
 RUN mv /sed/gcc/controller.bin /controller
+# Move debugging elf to root directory (TODO remove)
+RUN cp /sed/gcc/controller.axf /controller.elf
+RUN cp /sed/sed.secret.h /secret.h
 ###################################################################
 
 ###################################################################

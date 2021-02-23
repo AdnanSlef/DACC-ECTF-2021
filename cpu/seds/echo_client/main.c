@@ -53,7 +53,7 @@ siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+
 
 int main(void) {
   scewl_id_t src_id, tgt_id;
-  uint16_t len;
+  uint16_t len = 0x2000;
   char msg[BUF_SZ+1] = "hello to world!~";
   char data[BUF_SZ+1];
   struct timeval start, end;
@@ -76,6 +76,7 @@ int main(void) {
   scewl_init();
 
   // register
+  fprintf(log, "%d about to register\n", SCEWL_ID);
   if (scewl_register() != SCEWL_OK) {
     fprintf(log, "BAD REGISTRATION! Reregistering...\n");
     if (scewl_deregister() != SCEWL_OK) {
@@ -88,16 +89,16 @@ int main(void) {
     }
   }
   
-  sleep(10 * (SCEWL_ID-10));
+  //sleep(10 * (SCEWL_ID-10));
 
-  /* test long message */
-  fprintf(log, "%d Sending long hello...\n", SCEWL_ID);
+  /* test message of length len */
+  fprintf(log, "%d Sending %xB hello...\n", SCEWL_ID, len);
   gettimeofday(&start, NULL);
-  scewl_send(TGT_ID, BUF_SZ, msg);
+  scewl_send(TGT_ID, len, msg);
 
   // receive response (block until response received)
   fprintf(log, "%d Waiting for response...\n", SCEWL_ID);
-  scewl_recv(data, &src_id, &tgt_id, BUF_SZ, 1);
+  scewl_recv(data, &src_id, &tgt_id, len, 1);
   gettimeofday(&end, NULL);
   t1 = start.tv_sec + (start.tv_usec/1000000.0);
   t2 = end.tv_sec + (end.tv_usec/1000000.0);
@@ -106,37 +107,7 @@ int main(void) {
   fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
 
   // check if response matches
-  if (!strncmp(msg, data, BUF_SZ)) {
-    // decode and print flag
-    uint8_t flag[32] = {0};
-    for (int i = 0; flag_as[i]; i++) {
-      flag[i] = deobfuscate(flag_as[i], flag_bs[i]);
-      flag[i+1] = 0;
-    }
-    fprintf(log, "Congrats on booting the %d system! Press <enter> on the FAA transceiver to view your flag!\n", SCEWL_ID);
-    scewl_send(SCEWL_FAA_ID, strlen(flag), flag);
-  } else {
-    fprintf(log, "Bad response to %d!\n", SCEWL_ID);
-  }
-  /***********************/
-
-  /* test short message *
-  fprintf(log, "%d Sending short hello...\n", SCEWL_ID);
-  gettimeofday(&start, NULL);
-  scewl_send(TGT_ID, 0x100, msg);
-
-  // receive response (block until response received)
-  fprintf(log, "%d Waiting for response...\n", SCEWL_ID);
-  scewl_recv(data, &src_id, &tgt_id, 0x100, 1);
-  gettimeofday(&end, NULL);
-  t1 = start.tv_sec + (start.tv_usec/1000000.0);
-  t2 = end.tv_sec + (end.tv_usec/1000000.0);
-  fprintf(log, data);
-  fprintf(log, "\n");
-  fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
-
-  // check if response matches
-  if (!strncmp(msg, data, 0x100)) {
+  if (!strncmp(msg, data, len)) {
     // decode and print flag
     uint8_t flag[32] = {0};
     for (int i = 0; flag_as[i]; i++) {
@@ -151,9 +122,7 @@ int main(void) {
   /***********************/
 
 
-  /**********************/
-
-  sleep(1000);
+  //sleep(1000);
 
   // deregister
   fprintf(log, "Deregistering %d...\n", SCEWL_ID);
