@@ -53,7 +53,7 @@ siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+
 
 int main(void) {
   scewl_id_t src_id, tgt_id;
-  uint16_t len = 0x2000;
+  uint16_t len = 0x4000;
   char msg[BUF_SZ+1] = "hello to world!~";
   char data[BUF_SZ+1];
   struct timeval start, end;
@@ -89,7 +89,9 @@ int main(void) {
     }
   }
   
-  //sleep(10 * (SCEWL_ID-10));
+  if (SCEWL_ID > 18) {
+    sleep(100);
+  }
 
   /* test message of length len */
   fprintf(log, "%d Sending %xB hello...\n", SCEWL_ID, len);
