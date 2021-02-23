@@ -21,7 +21,9 @@
 #include "sb_all.h"
 #endif
 
-//#define DEBUG_TO_FAA
+#if 0 //SCEWL_ID==10
+#define DEBUG_TO_FAA
+#endif
 #ifdef DEBUG_TO_FAA
 #define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
 #define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
@@ -142,59 +144,57 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
   scewl_hdr_t hdr;
   int read, max;
 
+  // clear buffer and header
+  memset(&hdr, 0, sizeof(hdr));
+  memset(data, 0, n);
+
+  // find header start
   do {
-    // clear buffer and header
-    memset(&hdr, 0, sizeof(hdr));
-    memset(data, 0, n);
-
-    // find header start
-    do {
-      debug_struct(hdr);
-      hdr.magicC = 0;
-
-      if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
-        return SCEWL_NO_MSG;
-      }
-
-      // check for SC
-      if (hdr.magicS == 'S') {
-        do {//TODO remove debug
-          debug_str("^ trying to read magic C");
-          if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
-            return SCEWL_NO_MSG;
-          }
-        } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
-      }
-    } while (hdr.magicS != 'S' || hdr.magicC != 'C');
-
-    // read rest of header
-    debug_str("trying to read rest of header");
-    read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
-    if(read == INTF_NO_DATA) {
-      return SCEWL_NO_MSG;
-    }
     debug_struct(hdr);
+    hdr.magicC = 0;
 
-    // unpack header
-    *src_id = hdr.src_id;
-    *tgt_id = hdr.tgt_id;
-
-    // read body
-    max = hdr.len < n ? hdr.len : n;
-    read = intf_read(intf, data, max, blocking);
-
-    // throw away rest of message if too long
-    for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
-      intf_readb(intf, 0);
-    }
-
-    // report if not blocking and full message not received
-    if(read == INTF_NO_DATA || read < max) {
+    if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
       return SCEWL_NO_MSG;
     }
 
-  } while (0);
+    // check for SC
+    if (hdr.magicS == 'S') {
+      do {//TODO remove debug
+        debug_str("^ trying to read magic C");
+        if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
+          return SCEWL_NO_MSG;
+        }
+      } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
+    }
+  } while (hdr.magicS != 'S' || hdr.magicC != 'C');
 
+  // read rest of header
+  debug_str("trying to read rest of header");
+  read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
+  if(read == INTF_NO_DATA) {
+    return SCEWL_NO_MSG;
+  }
+  debug_struct(hdr);
+
+  // unpack header
+  *src_id = hdr.src_id;
+  *tgt_id = hdr.tgt_id;
+
+  // read body
+  max = hdr.len < n ? hdr.len : n;
+  read = intf_read(intf, data, max, blocking);
+
+  // throw away rest of message if too long
+  for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
+    intf_readb(intf, 0);
+  }
+
+  // report if not blocking and full message not received
+  if(read == INTF_NO_DATA || read < max) {
+    return SCEWL_NO_MSG;
+  }
+
+  // discard unwanted frames
   if (!l2_filter(intf, hdr.src_id, hdr.tgt_id)) {
     debug_str("filtering scewl frame");
     return SCEWL_NO_MSG;

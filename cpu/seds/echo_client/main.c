@@ -89,6 +89,7 @@ int main(void) {
     }
   }
   
+  //delay the 15th SED due to sock buffer caps
   if (SCEWL_ID > 24) {
     sleep(70);
   }
@@ -104,7 +105,7 @@ int main(void) {
   gettimeofday(&end, NULL);
   t1 = start.tv_sec + (start.tv_usec/1000000.0);
   t2 = end.tv_sec + (end.tv_usec/1000000.0);
-  fprintf(log, data);
+  fprintf(log, "%s", data);
   fprintf(log, "\n");
   fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
 
