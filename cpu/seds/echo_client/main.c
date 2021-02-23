@@ -89,8 +89,8 @@ int main(void) {
     }
   }
   
-  if (SCEWL_ID > 23) {
-    sleep(100);
+  if (SCEWL_ID > 24) {
+    sleep(70);
   }
 
   /* test message of length len */
