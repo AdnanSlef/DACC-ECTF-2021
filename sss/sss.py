@@ -41,7 +41,7 @@ class SSS:
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.bind(sockf)
-        self.sock.listen(10)
+        self.sock.listen(22)
         self.devs = {}
     
     @staticmethod

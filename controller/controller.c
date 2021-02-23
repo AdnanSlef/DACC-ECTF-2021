@@ -149,6 +149,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
     // find header start
     do {
+      debug_struct(hdr);
       hdr.magicC = 0;
 
       if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
@@ -157,7 +158,8 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
       // check for SC
       if (hdr.magicS == 'S') {
-        do {
+        do {//TODO remove debug
+          debug_str("^ trying to read magic C");
           if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
             return SCEWL_NO_MSG;
           }
@@ -166,10 +168,12 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
     } while (hdr.magicS != 'S' || hdr.magicC != 'C');
 
     // read rest of header
+    debug_str("trying to read rest of header");
     read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
     if(read == INTF_NO_DATA) {
       return SCEWL_NO_MSG;
     }
+    debug_struct(hdr);
 
     // unpack header
     *src_id = hdr.src_id;
@@ -189,7 +193,12 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
       return SCEWL_NO_MSG;
     }
 
-  } while (!l2_filter(intf, hdr.src_id, hdr.tgt_id));
+  } while (0);
+
+  if (!l2_filter(intf, hdr.src_id, hdr.tgt_id)) {
+    debug_str("filtering scewl frame");
+    return SCEWL_NO_MSG;
+  }
   
   // return the length read
   return max;
@@ -605,13 +614,17 @@ int main() {
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          secure_send(buf, tgt_id, len);
+          if(!secure_send(buf, tgt_id, len)) {
+            debug_str("failed to secure broadcast");
+          }
         } else if (tgt_id == SCEWL_SSS_ID) {
           registered = handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-          secure_send(buf, tgt_id, len);
+          if (!secure_send(buf, tgt_id, len)) {
+            debug_str("failed to secure direct transmit");
+          }
         }
 
         continue;
@@ -627,11 +640,15 @@ int main() {
           if (src_id == SCEWL_FAA_ID) {
             handle_faa_recv(buf, len);
           }
-          secure_recv(buf, src_id, len, 1);
+          if (!secure_recv(buf, src_id, len, 1)) {
+            debug_str("failed to secure broadcast recv");
+          }
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          secure_recv(buf, src_id, len, 0);
+          if (!secure_recv(buf, src_id, len, 0)) {
+            debug_str("failed to secure direct recv");
+          }
         }
       }
     }
