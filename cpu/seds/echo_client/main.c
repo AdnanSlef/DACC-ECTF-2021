@@ -89,7 +89,7 @@ int main(void) {
     }
   }
   
-  if (SCEWL_ID > 18) {
+  if (SCEWL_ID > 23) {
     sleep(100);
   }
 
