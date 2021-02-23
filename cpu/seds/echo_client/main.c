@@ -89,8 +89,15 @@ int main(void) {
     }
   }
   
+<<<<<<< HEAD
   //sleep(10 * (SCEWL_ID-10));
   sleep(3);
+=======
+  //delay the 15th SED due to sock buffer caps
+  if (SCEWL_ID > 24) {
+    sleep(70);
+  }
+>>>>>>> ab0617d... add desired features from "break it again" commit
 
   /* test message of length len */
   fprintf(log, "%d Sending %xB hello...\n", SCEWL_ID, len);
