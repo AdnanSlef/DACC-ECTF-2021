@@ -358,6 +358,12 @@ int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /********************/
 
   /*    check for problems    */
+  //ensure registration has been completed
+  if(!registered) {
+    //SED has yet to register successfully
+    return SCEWL_ERR;
+  }
+
   // validate input length
   if (len > SCEWL_MAX_DATA_SZ) {
     //requested length is too long
@@ -422,8 +428,8 @@ int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   /*    pack network packet header    */
   net_hdr.src   = DEPL_ID;
   net_hdr.tgt   = tgt_depl_id;
-  net_hdr.seq   = seq++;
   net_hdr.ctlen = len;
+  net_hdr.seq   = seq++;
   bcopy(net_hdr.key, aeskey, 16);
   bcopy(net_hdr.iv, iv, 16);
   /************************************/
@@ -490,6 +496,12 @@ int secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadca
   /*    check for problems    */
   net_hdr = (secure_hdr_t *)data;
   
+  // ensure registration has been completed
+  if(!registered) {
+    //SED has yet to register successfully
+    return SCEWL_ERR;
+  }
+
   // validate input length
   if (len > sizeof(buf)) {
     //requested length is too long
@@ -587,7 +599,7 @@ int secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadca
 
 
 int main() {
-  int registered = 0, len;
+  int len;
   uint16_t src_id, tgt_id;
 
   // initialize interfaces

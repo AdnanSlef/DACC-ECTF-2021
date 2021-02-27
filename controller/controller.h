@@ -21,6 +21,7 @@
 #include <string.h>
 
 #define SCEWL_MAX_DATA_SZ 0x4000
+#define DEPL_COUNT 256
 
 // type of a SCEWL ID
 typedef uint16_t scewl_id_t;
@@ -35,9 +36,9 @@ typedef struct __attribute__((__packed__)) secure_hdr_t {
   uint8_t sig[64];  //ECDSA signature
   uint16_t src;     //src and tgt are depl_id's, not SCEWL_ID's
   uint16_t tgt;
-  uint64_t seq;     //64-bit sequence number
   uint16_t ctlen;
   uint16_t padding;
+  uint64_t seq;     //64-bit sequence number
   uint8_t key[16];  //128-bit encrypted AES key
   uint8_t iv[16];
   /* ciphertext follows */
@@ -54,11 +55,39 @@ typedef struct scewl_hdr_t {
   /* data follows */
 } scewl_hdr_t;
 
-// registration message
+// basic registration message
 typedef struct scewl_sss_msg_t {
   scewl_id_t dev_id;
   uint16_t   op;
 } scewl_sss_msg_t;
+
+// registration request message
+typedef struct sss_reg_req_t {
+  scewl_sss_msg_t basic;
+} sss_reg_req_t;
+
+// deregistration request message
+typedef struct sss_dereg_req_t {
+  scewl_sss_msg_t basic;
+} sss_dereg_req_t;
+
+// registration response message
+typedef struct sss_reg_rsp_t {
+  scewl_sss_msg_t basic;
+  uint32_t padding;
+  uint16_t ids_db[DEPL_COUNT];     //maps SCEWL ids to deployment ids
+  uint64_t seq;                    //this SED's sequence number
+  uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
+  uint8_t  cryptkey[16]; //key to unlock ecc
+  uint8_t  cryptiv[16];  //iv to unlock ecc
+  uint8_t  entropky[16]; //just random data
+  uint8_t  entriv[16];   //"              "
+} sss_reg_rsp_t;
+
+// deregistration response message
+typedef struct sss_dereg_rsp_t {
+  scewl_sss_msg_t basic;
+} sss_dereg_rsp_t;
 
 // SCEWL status codes
 #define SCEWL_ERR 0

@@ -61,6 +61,7 @@ def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
 #define NUM_SEEDS {NUM_SEEDS}
 uint16_t seed_idx = 0;
 char depl_id_str[8] = "{depl_id}";
+int registered = 0;
 /**********************************************/
 
 /**** Values distributed during registration ****/
