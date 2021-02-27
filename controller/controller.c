@@ -21,11 +21,7 @@
 #include "sb_all.h"
 #endif
 
-<<<<<<< HEAD
-#if SCEWL_ID == 10
-=======
 #if 0 //SCEWL_ID==10
->>>>>>> ab0617d... add desired features from "break it again" commit
 #define DEBUG_TO_FAA
 #endif
 #ifdef DEBUG_TO_FAA
@@ -152,30 +148,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
   memset(&hdr, 0, sizeof(hdr));
   memset(data, 0, n);
 
-<<<<<<< HEAD
-  /* find header start */
-  do {
-    hdr.magicC = 0;
-  
-    if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
-      return SCEWL_NO_MSG;
-    }
-  
-    // check for SC
-    if (hdr.magicS == 'S') {
-      do {
-        debug_str("^ trying to read magic C");
-        if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
-          return SCEWL_NO_MSG;
-        }
-      } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
-    }
-    
-  } while (hdr.magicS != 'S' || hdr.magicC != 'C');
-
-  /*********************/
-=======
-  // find header start
+ // find header start
   do {
     debug_struct(hdr);
     hdr.magicC = 0;
@@ -186,7 +159,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
     // check for SC
     if (hdr.magicS == 'S') {
-      do {//TODO remove debug
+      do {
         debug_str("^ trying to read magic C");
         if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
           return SCEWL_NO_MSG;
@@ -194,7 +167,6 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
       } while (hdr.magicC == 'S'); // in case of multiple 'S's in a row
     }
   } while (hdr.magicS != 'S' || hdr.magicC != 'C');
->>>>>>> ab0617d... add desired features from "break it again" commit
 
   // read rest of header
   debug_str("trying to read rest of header");
@@ -211,18 +183,10 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
   // read body
   max = hdr.len < n ? hdr.len : n;
   read = intf_read(intf, data, max, blocking);
-<<<<<<< HEAD
-  debug_str("read:");
-  debug_struct(read);
 
   // throw away rest of message if too long
   for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
     if (i == 0) {i = hdr.len - max; debug_str("extra bytes:"); debug_struct(i); i=0;}
-=======
-
-  // throw away rest of message if too long
-  for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
->>>>>>> ab0617d... add desired features from "break it again" commit
     intf_readb(intf, 0);
   }
 
@@ -231,11 +195,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
     return SCEWL_NO_MSG;
   }
 
-<<<<<<< HEAD
-  // filter out unwanted frames
-=======
   // discard unwanted frames
->>>>>>> ab0617d... add desired features from "break it again" commit
   if (!l2_filter(intf, hdr.src_id, hdr.tgt_id)) {
     debug_str("filtering scewl frame");
     return SCEWL_NO_MSG;
