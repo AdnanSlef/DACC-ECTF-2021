@@ -159,7 +159,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
     // check for SC
     if (hdr.magicS == 'S') {
-      do {//TODO remove debug
+      do {
         debug_str("^ trying to read magic C");
         if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
           return SCEWL_NO_MSG;
@@ -186,6 +186,7 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
   // throw away rest of message if too long
   for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
+    if (i == 0) {i = hdr.len - max; debug_str("extra bytes:"); debug_struct(i); i=0;}
     intf_readb(intf, 0);
   }
 
@@ -609,6 +610,7 @@ int main() {
 
       // handle outgoing message from CPU
       if (intf_avail(CPU_INTF)) {
+        debug_str("CPU_INTF was avail");
         // Read message from CPU
         len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len==SCEWL_NO_MSG) continue;
@@ -617,6 +619,7 @@ int main() {
           if(!secure_send(buf, tgt_id, len)) {
             debug_str("failed to secure broadcast");
           }
+          else {debug_str("successful secure brdcst");}
         } else if (tgt_id == SCEWL_SSS_ID) {
           registered = handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
@@ -625,6 +628,7 @@ int main() {
           if (!secure_send(buf, tgt_id, len)) {
             debug_str("failed to secure direct transmit");
           }
+          else {debug_str("successful secure direct transmit");}
         }
 
         continue;
@@ -632,6 +636,7 @@ int main() {
 
       // handle incoming radio message
       if (intf_avail(RAD_INTF)) {
+        debug_str("RAD_INTF was avail");
         // Read message from antenna
         len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len == SCEWL_NO_MSG) continue;
@@ -643,12 +648,14 @@ int main() {
           if (!secure_recv(buf, src_id, len, 1)) {
             debug_str("failed to secure broadcast recv");
           }
+          else {debug_str("successful secure brdcst recv");}
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
           if (!secure_recv(buf, src_id, len, 0)) {
             debug_str("failed to secure direct recv");
           }
+          else {debug_str("successful secure direct recv");}
         }
       }
     }

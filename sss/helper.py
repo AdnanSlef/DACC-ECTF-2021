@@ -50,32 +50,25 @@ def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
 #ifndef SECRETS_H
 #define SECRETS_H
 
-/**** Public, deployment-wide info ****/
+/**** Non-confidential values from add_sed ****/
 #define DEPL_COUNT {DEPL_COUNT}
+#define DEPL_ID {depl_id}
 #define DEPL_BRDCST_ID 0xFFFF
 #define ECC_PUBSIZE {ECC_PUBSIZE}
 #define ECC_PRIVSIZE {ECC_PRIVSIZE}
 #define SLOTH 0 // seconds to send 0x100 bytes of data
 #define ONE_SECOND 0x10000000 // iterations needed to wait one second
 #define NUM_SEEDS {NUM_SEEDS}
-uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
-    for pubkey in pubkeys:
-        secrets += f"""
-              {{ {', '.join(hex(b)for b in pubkey)} }},"""
-    secrets += f"""
-}};
-uint8_t BRDCST_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in brdcst_privkey)} }};
-uint8_t BRDCST_PUBLIC[ECC_PUBSIZE] = {{ {', '.join(hex(b)for b in brdcst_public)} }};
-uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
-/**************************************/
-
-/**** Secrets & info specific to this SED ****/
-#define DEPL_ID {depl_id}
-uint64_t seq = 1;
 uint16_t seed_idx = 0;
 char depl_id_str[8] = "{depl_id}";
-uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkey)} }};
+/**********************************************/
+
+/**** Values distributed during registration ****/
+uint64_t seq = 1;
 uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
+
+uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
+
 uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     for seed in entropy:
         secrets += f"""
@@ -83,7 +76,17 @@ uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     secrets += f"""
 }};
 uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
-/*********************************************/
+
+uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
+    for pubkey in pubkeys:
+        secrets += f"""
+              {{ {', '.join(hex(b)for b in pubkey)} }},"""
+    secrets += f"""
+}};
+uint8_t BRDCST_PUBLIC[ECC_PUBSIZE] = {{ {', '.join(hex(b)for b in brdcst_public)} }};
+uint8_t ECC_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in privkey)} }};
+uint8_t BRDCST_PRIVATE_KEY[ECC_PRIVSIZE] = {{ {', '.join(hex(b)for b in brdcst_privkey)} }};
+/*************************************************/
 
 #endif //SECRETS_H
 """
@@ -100,6 +103,7 @@ def blank_counter():
 def assign_secrets(SCEWL_ID):
     with open('/secrets/counter', 'r') as cf:
         depl_id = int(cf.read())
+    assert depl_id < DEPL_COUNT
     with open('/secrets/counter', 'w') as cf:
         cf.write(str(depl_id+1))
     with open(f"/secrets/depl_id_{depl_id}", 'r') as sf:

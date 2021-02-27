@@ -41,7 +41,7 @@ class SSS:
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.bind(sockf)
-        self.sock.listen(22)
+        self.sock.listen(10)
         self.devs = {}
     
     @staticmethod
@@ -125,8 +125,12 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    # Here is where deploy-time tasks are run
+
     # map of SCEWL IDs to statuses
     sss = SSS(args.sockf)
+
     sss.start()
 
 

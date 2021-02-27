@@ -63,9 +63,9 @@ int main(void) {
     memcpy(msg+0x10*i, msg, 16);
   }
   msg[0] = 'A';
-  msg[BUF_SZ-1] = 'Z';
-  msg[BUF_SZ] = '\x00';
-  data[BUF_SZ] = '\x00';
+  msg[len-1] = 'Z';
+  msg[len] = '\x00';
+  data[len] = '\x00';
 
   // open log file
   FILE *log = stderr;
@@ -123,9 +123,6 @@ int main(void) {
     fprintf(log, "Bad response!\n");
   }
   /***********************/
-
-
-  //sleep(1000);
 
   // deregister
   fprintf(log, "Deregistering %d...\n", SCEWL_ID);
