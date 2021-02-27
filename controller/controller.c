@@ -21,7 +21,7 @@
 #include "sb_all.h"
 #endif
 
-#if 1 //SCEWL_ID==10
+#if 0 //SCEWL_ID==10
 #define DEBUG_TO_FAA
 #endif
 #ifdef DEBUG_TO_FAA
