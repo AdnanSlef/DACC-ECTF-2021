@@ -21,7 +21,7 @@
 #include "sb_all.h"
 #endif
 
-#if 0 //SCEWL_ID==10
+#if 1 //SCEWL_ID==10
 #define DEBUG_TO_FAA
 #endif
 #ifdef DEBUG_TO_FAA
@@ -612,7 +612,7 @@ int main() {
       if (intf_avail(CPU_INTF)) {
         debug_str("CPU_INTF was avail");
         // Read message from CPU
-        len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 0);
+        len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
@@ -638,7 +638,7 @@ int main() {
       if (intf_avail(RAD_INTF)) {
         debug_str("RAD_INTF was avail");
         // Read message from antenna
-        len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 0);
+        len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len == SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
