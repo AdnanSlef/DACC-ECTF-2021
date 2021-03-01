@@ -99,15 +99,20 @@ typedef struct sss_dereg_rsp_t {
 } sss_dereg_rsp_t;
 
 // SCEWL status codes
-#define SCEWL_ERR 0
-#define SCEWL_NO_MSG 0
-#define SCEWL_OK 1
+#define SCEWL_ALREADY  -1
+#define SCEWL_ERR      0
+#define SCEWL_NO_MSG   0
+#define SCEWL_OK       1
 
 // registration/deregistration options
-enum scewl_sss_op_t { SCEWL_SSS_ALREADY = -1, SCEWL_SSS_REG, SCEWL_SSS_DEREG };
+#define SCEWL_SSS_ALREADY  -1
+#define SCEWL_SSS_REG      0
+#define SCEWL_SSS_DEREG    1
 
 // reserved SCEWL IDs
-enum scewl_ids { SCEWL_BRDCST_ID, SCEWL_SSS_ID, SCEWL_FAA_ID };
+#define SCEWL_BRDCST_ID  0
+#define SCEWL_SSS_ID     1
+#define SCEWL_FAA_ID     2
 
 /*
  * l2_filter

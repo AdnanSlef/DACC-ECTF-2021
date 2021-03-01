@@ -247,7 +247,7 @@ int handle_registration(char *msg) {
   }
 
   // bad op
-  return 0;
+  return SCEWL_ERR;
 }
 
 
@@ -263,7 +263,7 @@ int sss_register() {
   // send registration
   status = send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(msg), (char *)&msg);
   if (status == SCEWL_ERR) {
-    return 0;
+    return SCEWL_ERR;
   }
 
   // receive response
@@ -272,18 +272,86 @@ int sss_register() {
   // notify CPU of response
   status = send_msg(CPU_INTF, src_id, tgt_id, len, (char *)&msg);
   if (status == SCEWL_ERR) {
-    return 0;
+    return SCEWL_ERR;
   }
   
   /*    instantiate drbg    */
   if (sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8) != SB_SUCCESS) {
-    return 0;
+    return SCEWL_ERR;
   }
   seed_idx++; seed_idx %= NUM_SEEDS;
   /**************************/
 
-  // op should be REG on success
-  return msg.op == SCEWL_SSS_REG;
+  // successfully registered
+  registered = 1;
+
+  return SCEWL_OK;
+}
+
+
+void sss_internal(int code, int type) {
+  scewl_sss_msg_t msg;
+  
+  msg.dev_id = SCEWL_ID;
+  
+  switch(code) {
+    case SCEWL_OK:
+      msg.op = type? SCEWL_SSS_DEREG : SCEWL_SSS_REG;
+      break;
+    case SCEWL_ERR:
+    case SCEWL_ALREADY:
+      msg.op = SCEWL_SSS_ALREADY;
+      break;
+  }
+
+  send_msg(CPU_INTF, SCEWL_SSS_ID, SCEWL_ID, sizeof(msg), (char *)&msg);
+}
+
+
+int secure_register() {
+  sss_reg_req_t req;
+  sss_reg_rsp_t *rsp = (sss_reg_rsp_t *)buf;
+  scewl_id_t src_id, tgt_id;
+  int status, len;
+
+  // check if already registered
+  if (registered) {
+    sss_internal(SCEWL_ALREADY, SCEWL_SSS_REG);
+    //already registered
+    return SCEWL_ERR;
+  }
+
+  // fill registration message
+  req.basic.dev_id = SCEWL_ID;
+  req.basic.op = SCEWL_SSS_REG;
+  bcopy(req.auth, AUTH, 16);
+  
+  // send registration request
+  send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(req), (char *)&req);
+
+  // receive registration response
+  len = read_msg(SSS_INTF, (char *)rsp, &src_id, &tgt_id, sizeof(sss_reg_rsp_t), 1);
+
+  // verify source and target
+  if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID) {
+    //this registration is not between the two intended parties
+    sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
+    return SCEWL_ERR;
+  }
+
+  //TODO do things here
+
+  /*    instantiate drbg    */
+  if (sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8) != SB_SUCCESS) {
+    return SCEWL_ERR;
+  }
+  seed_idx++; seed_idx %= NUM_SEEDS;
+  /**************************/
+
+  // successfully registered
+  registered = 1;
+  sss_internal(SCEWL_OK, SCEWL_SSS_REG);
+  return SCEWL_OK;
 }
 
 
@@ -299,7 +367,7 @@ int sss_deregister() {
   // send registration
   status = send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(msg), (char *)&msg);
   if (status == SCEWL_ERR) {
-    return 0;
+    return SCEWL_ERR;
   }
 
   // receive response
@@ -308,11 +376,13 @@ int sss_deregister() {
   // notify CPU of response
   status = send_msg(CPU_INTF, src_id, tgt_id, len, (char *)&msg);
   if (status == SCEWL_ERR) {
-    return 0;
+    return SCEWL_ERR;
   }
+  
+  // successfully deregistered
+  registered = 0;
 
-  // op should be DEREG on success
-  return msg.op == SCEWL_SSS_DEREG;
+  return SCEWL_OK;
 }
 
 
@@ -622,7 +692,7 @@ int main() {
     //TODO continue if len to short (or make sure handle_registration is fine)
 
     if (tgt_id == SCEWL_SSS_ID) {
-      registered = handle_registration(buf);
+      handle_registration(buf);
     }
 
     // serve while registered
@@ -641,7 +711,7 @@ int main() {
           }
           else {debug_str("successful secure brdcst");}
         } else if (tgt_id == SCEWL_SSS_ID) {
-          registered = handle_registration(buf);
+          handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {

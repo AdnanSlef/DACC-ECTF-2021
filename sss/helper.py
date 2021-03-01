@@ -46,6 +46,9 @@ def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
     entropy = [get_random_bytes(32) for _ in range(NUM_SEEDS)]
     nonce = get_random_bytes(16)
 
+    # Authorize the SED as part of the deployment
+    auth = get_random_bytes(16)
+
     secrets = f"""
 #ifndef SECRETS_H
 #define SECRETS_H
@@ -77,6 +80,8 @@ uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     secrets += f"""
 }};
 uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
+
+uint8_t AUTH[16] = {{ {', '.join(hex(b)for b in nonce)} }};
 
 uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
     for pubkey in pubkeys:
