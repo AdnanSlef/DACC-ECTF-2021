@@ -607,6 +607,14 @@ int main() {
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
 
+  // debug struct sizes
+  uint32_t reg_req = sizeof(sss_reg_req_t), reg_rsp = sizeof(sss_reg_rsp_t), dereg_req = sizeof(sss_dereg_req_t), dereg_rsp = sizeof(sss_dereg_rsp_t);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, "reg_req, reg_rsp, dereg_req, dereg_rsp sizes:");
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &reg_req);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &reg_rsp);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &dereg_req);
+  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &dereg_rsp);
+
   // serve forever
   while (1) {
     // register with SSS

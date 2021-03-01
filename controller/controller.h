@@ -25,6 +25,8 @@
 
 // type of a SCEWL ID
 typedef uint16_t scewl_id_t;
+// type of a deployment ID
+typedef uint16_t depl_id_t;
 
 // SCEWL_ID must be defined
 #ifndef SCEWL_ID
@@ -61,17 +63,22 @@ typedef struct scewl_sss_msg_t {
   uint16_t   op;
 } scewl_sss_msg_t;
 
-// registration request message
+// registration request message (20B)
 typedef struct sss_reg_req_t {
   scewl_sss_msg_t basic;
+  uint8_t auth[16];
 } sss_reg_req_t;
 
-// deregistration request message
+// deregistration request message (2080B)
 typedef struct sss_dereg_req_t {
   scewl_sss_msg_t basic;
+  uint32_t padding;
+  uint8_t auth[16];
+  uint64_t seq;
+  uint64_t known_seqs[DEPL_COUNT];
 } sss_dereg_req_t;
 
-// registration response message
+// registration response message (2640B)
 typedef struct sss_reg_rsp_t {
   scewl_sss_msg_t basic;
   uint32_t padding;
@@ -80,13 +87,15 @@ typedef struct sss_reg_rsp_t {
   uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
   uint8_t  cryptkey[16]; //key to unlock ecc
   uint8_t  cryptiv[16];  //iv to unlock ecc
-  uint8_t  entropky[16]; //just random data
-  uint8_t  entriv[16];   //"              "
+  uint8_t  entropky[16]; //just random bytes
+  uint8_t  entriv[16];   //"               "
 } sss_reg_rsp_t;
 
-// deregistration response message
+// deregistration response message (36B)
 typedef struct sss_dereg_rsp_t {
   scewl_sss_msg_t basic;
+  uint8_t cryptkey[16]; //key to lock ecc
+  uint8_t cryptiv[16];  //iv to lock ecc
 } sss_dereg_rsp_t;
 
 // SCEWL status codes

@@ -37,3 +37,4 @@ class Vault:
     # Wrtie vault to disk
     def push(self):
         pass
+
