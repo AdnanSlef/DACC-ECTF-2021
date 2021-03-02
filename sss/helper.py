@@ -30,12 +30,15 @@ def create_secrets_before():
     brdcst_public = ecc.construct(curve='secp256r1',d=brdcst_privkey.d).public_key()._point
     brdcst_keys = [brdcst_privkey,brdcst_public]
 
+    # Uniquely identify this deployment
+    depl_nonce = get_random_bytes(16)
+
     # Generate secrets for each depl_id
     for depl_id in range(DEPL_COUNT):
-        make_a_secret(depl_id, privkeys[depl_id], pubkeys, brdcst_keys)
+        make_a_secret(depl_id, depl_nonce, privkeys[depl_id], pubkeys, brdcst_keys)
 
 # Prepare one SED's secrets file, by deployment ID
-def make_a_secret(depl_id, privkey, pubkeys, brdcst_keys):
+def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
     # Pack keys for use in the Controller
     privkey = long_to_bytes(privkey.d, ECC_PRIVSIZE)
     pubkeys = [long_to_bytes(point.x, ECC_PRIVSIZE) + long_to_bytes(point.y, ECC_PRIVSIZE) for point in pubkeys]
@@ -81,7 +84,8 @@ uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
 }};
 uint8_t NONCE[16] = {{ {', '.join(hex(b)for b in nonce)} }};
 
-uint8_t AUTH[16] = {{ {', '.join(hex(b)for b in nonce)} }};
+uint8_t AUTH[16] = {{ {', '.join(hex(b)for b in auth)} }};
+uint8_t depl_nonce[16] = {{ {', '.join(hex(b)for b in depl_nonce)} }};
 
 uint8_t ECC_PUBLICS_DB[DEPL_COUNT][ECC_PUBSIZE] = {{"""
     for pubkey in pubkeys:

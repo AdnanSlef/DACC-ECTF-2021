@@ -510,6 +510,8 @@ int secure_send(char *data, scewl_id_t tgt_scewl_id, uint16_t len)
   sb_sha256_update(&sha, (uint8_t *)&net_hdr + sizeof(net_hdr.sig), sizeof(net_hdr)-sizeof(net_hdr.sig));
   //ciphertext
   sb_sha256_update(&sha, data, len);
+  //deployment nonce
+  sb_sha256_update(&sha, depl_nonce, sizeof(depl_nonce));
   sb_sha256_finish(&sha, &hash);
   
   if (sb_sw_sign_message_digest(&sb_ctx, &sig, private, &hash, &drbg, SB_SW_CURVE_P256, 1) != SB_SUCCESS) {
@@ -613,6 +615,8 @@ int secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadca
   sb_sha256_update(&sha, (uint8_t *)net_hdr + sizeof(sb_sw_signature_t), sizeof(secure_hdr_t)-sizeof(sb_sw_signature_t));
   //verify ciphertext integrity
   sb_sha256_update(&sha, xtext, net_hdr->ctlen);
+  //deployment nonce
+  sb_sha256_update(&sha, depl_nonce, sizeof(depl_nonce));
   sb_sha256_finish(&sha, &hash);
 
   //reject packets which fail integrity check
