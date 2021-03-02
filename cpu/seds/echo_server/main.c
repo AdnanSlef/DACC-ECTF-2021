@@ -66,7 +66,7 @@ int main(void) {
     fprintf(log, "src_id: %d\n", src_id);
     fprintf(log, "tgt_id: %d\n", tgt_id);
     fprintf(log, "len:    %d\n", len);
-    fprintf(log, "data:   \"%s\"\n\n", data);
+    //fprintf(log, "data:   \"%s\"\n\n", data);
 
     // echo message
     scewl_send(src_id, len, data);

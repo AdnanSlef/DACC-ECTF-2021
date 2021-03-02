@@ -105,7 +105,7 @@ int main(void) {
   gettimeofday(&end, NULL);
   t1 = start.tv_sec + (start.tv_usec/1000000.0);
   t2 = end.tv_sec + (end.tv_usec/1000000.0);
-  fprintf(log, "%s", data);
+  //fprintf(log, "%s", data);
   fprintf(log, "\n");
   fprintf(log, "Time used for %d to send and receive: %f\n", SCEWL_ID, t2-t1);
 
@@ -121,6 +121,7 @@ int main(void) {
     scewl_send(SCEWL_FAA_ID, strlen(flag), flag);
   } else {
     fprintf(log, "Bad response!\n");
+    scewl_send(SCEWL_FAA_ID, 16, "Bad response!!!\n");
   }
   /***********************/
 
