@@ -325,7 +325,7 @@ int secure_register(void) {
   // fill registration request
   req.basic.dev_id = SCEWL_ID;
   req.basic.op = SCEWL_SSS_REG;
-  bcopy(req.auth, AUTH, 16);
+  bcopy(req.auth, AUTH, sizeof(req.auth));
   
   // send registration request
   send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(req), (char *)&req);
@@ -385,8 +385,60 @@ int secure_register(void) {
 
 
 int secure_deregister(void) {
-  ;
+  //TODO declare locals
+  sss_dereg_req_t *req = (sss_dereg_req_t *)buf;
+  sss_dereg_rsp_t rsp;
+  scewl_id_t src_id, tgt_id;
+  int len;
+
+  // verify state
+  if (!registered) {
+    sss_internal(SCEWL_ALREADY, SCEWL_SSS_DEREG);
+    //not yet registered
+    return SCEWL_ERR;
+  }
+
+  // repeatedly attempt deregistration
+  do {
+
+    // clear request and response
+    memset(req, 0, sizeof(sss_dereg_req_t));
+    memset(&rsp, 0, sizeof(rsp));
+
+    // fill deregistration request
+    req->basic.dev_id = SCEWL_ID;
+    req->basic.op = SCEWL_SSS_DEREG;
+    bcopy(req->auth, AUTH, sizeof(req->auth));
+    req->seq = seq;
+    bcopy((uint8_t *)req->known_seqs, (uint8_t *)KNOWN_SEQS, sizeof(req->known_seqs));
+
+    // send deregistration request
+    send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(sss_dereg_req_t), (char *)req);
+
+    // receive deregistration response
+    len = read_msg(SSS_INTF, (char *)&rsp, &src_id, &tgt_id, sizeof(rsp), 1);
+    if (len != sizeof(rsp) || rsp.basic.op != SCEWL_SSS_DEREG) {
+      //did not receive a complete deregistration response
+      continue;
+    }
+    
+    // verify source and target
+    if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp.basic.dev_id != src_id) {
+      //this deregistration is not between the two intended parties
+      continue;
+    }
+
+    // successfully deregistered
+    registered = 0;
+
+  } while (registered);
+
+  // hang until power down
+  sss_internal(SCEWL_OK, SCEWL_SSS_DEREG);
+  while(1){/* spin merrily in circles */}
+
 }
+
 
 int sss_deregister() {
   scewl_sss_msg_t msg;
