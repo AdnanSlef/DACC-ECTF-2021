@@ -241,24 +241,64 @@ int handle_faa_send(char* data, uint16_t len);
  * 
  * Interprets a CPU registration message
  * 
- * args:
- *   op - pointer to the operation message received by the CPU
+ * Args:
+ *   [in]  op - pointer to the operation message received by the CPU
+ * Returns:
+ *  SCEWL_OK if a successful registration is performed
+ *  SCEWL_ERR if a bad operation is requested or
+ *    the requested operation was unsuccessful
+ *  Never returns upon successful deregistration;
+ *    see secure_deregister()
  */
 int handle_registration(char* op);
 
 /*
- * sss_register
+ * secure_register
  * 
- * Performs a registration with the SSS
+ * Performs a registration with the SSS.
+ * Prepares the SED to engage in communication.
+ * Uses the authroization key AUTH.
+ *
+ * Retrieves seq, KNOWN_SEQS, SCEWL_IDS_DB, and depl_nonce.
+ * Unlocks ECC_PUBLICS_DB, BRDCST_PUBLIC,
+ *   ECC_PRIVATE_KEY, and BRDCST_PRIVATE_KEY.
+ * Scrambles entropy and initializes drbg.
+ * 
+ * Returns:
+ *   SCEWL_OK upon successful registration
+ *   SCEWL_ERR if registration fails
  */
-int sss_register();
+int secure_register(void);
 
 /*
- * sss_deregister
+ * secure_deregister
  * 
- * Performs a deregistration with the SSS
+ * Performs a deregistration with the SSS.
+ * Uses the authorization key AUTH.
+ * Stores seq and KNOWN_SEQS for future missions.
+ *
+ * WARNING: Deregistration causes the SCEWL Bus
+ * Controller to hang until powered down.
+ *
+ * Returns:
+ *   SCEWL_ERR if the SED is not yet registered
+ *   Never returns upon successful deregistration
  */
-int sss_deregister();
+int secure_deregister(void);
+
+/*
+ * sss_internal
+ *
+ * Informs the CPU of an SSS response.
+ * Uses SCEWL_SSS_ALREADY to indicate a failure,
+ * and the requested operation type to indicate
+ * success (SCEWL_SSS_REG or SCEWL_SSS_DEREG).
+ *
+ * Args:
+ *   [in]  code - the SCEWL status code encountered
+ *   [in]  type - the SCEWL_SSS operation type requested
+ */
+void sss_internal(int code, int type);
 
 /*
  * prep_drbg

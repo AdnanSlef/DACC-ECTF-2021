@@ -308,7 +308,7 @@ void sss_internal(int code, int type) {
 }
 
 
-int secure_register() {
+int secure_register(void) {
   sss_reg_req_t req;
   sss_reg_rsp_t *rsp = (sss_reg_rsp_t *)buf;
   scewl_id_t src_id, tgt_id;
@@ -383,6 +383,10 @@ int secure_register() {
   return SCEWL_OK;
 }
 
+
+int secure_deregister(void) {
+  ;
+}
 
 int sss_deregister() {
   scewl_sss_msg_t msg;
@@ -722,7 +726,6 @@ int main() {
   while (1) {
     // register with SSS
     len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
-    //TODO continue if len to short (or make sure handle_registration is fine)
 
     if (tgt_id == SCEWL_SSS_ID) {
       handle_registration(buf);
