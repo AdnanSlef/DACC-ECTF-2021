@@ -45,6 +45,7 @@ make add_sed SED=echo_client SCEWL_ID=21 NAME=echo_client CUSTOM='TGT_ID=10'
 make add_sed SED=echo_client SCEWL_ID=22 NAME=echo_client CUSTOM='TGT_ID=10'
 make add_sed SED=echo_client SCEWL_ID=23 NAME=echo_client CUSTOM='TGT_ID=10'
 make add_sed SED=echo_client SCEWL_ID=24 NAME=echo_client CUSTOM='TGT_ID=10'
+make add_sed SED=echo_client SCEWL_ID=25 NAME=echo_client CUSTOM='TGT_ID=10'
 
 # launch deployment
 make deploy
@@ -69,6 +70,7 @@ make launch_sed_d NAME=echo_client SCEWL_ID=21
 make launch_sed_d NAME=echo_client SCEWL_ID=22
 make launch_sed_d NAME=echo_client SCEWL_ID=23
 make launch_sed_d NAME=echo_client SCEWL_ID=24
+make launch_sed_d NAME=echo_client SCEWL_ID=25
 
 # bring transceiver back into foreground
 fg

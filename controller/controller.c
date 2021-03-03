@@ -312,7 +312,8 @@ int secure_register() {
   sss_reg_req_t req;
   sss_reg_rsp_t *rsp = (sss_reg_rsp_t *)buf;
   scewl_id_t src_id, tgt_id;
-  int status, len;
+  int len;
+  struct AES_ctx aes_ctx;
 
   // check if already registered
   if (registered) {
@@ -321,7 +322,7 @@ int secure_register() {
     return SCEWL_ERR;
   }
 
-  // fill registration message
+  // fill registration request
   req.basic.dev_id = SCEWL_ID;
   req.basic.op = SCEWL_SSS_REG;
   bcopy(req.auth, AUTH, 16);
@@ -331,26 +332,54 @@ int secure_register() {
 
   // receive registration response
   len = read_msg(SSS_INTF, (char *)rsp, &src_id, &tgt_id, sizeof(sss_reg_rsp_t), 1);
-
-  // verify source and target
-  if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID) {
-    //this registration is not between the two intended parties
+  if (len != sizeof(sss_reg_rsp_t) || rsp->basic.op != SCEWL_SSS_REG) {
+    //did not receive a complete registration response
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
+    memset(rsp, 0, len);
     return SCEWL_ERR;
   }
 
-  //TODO do things here
+  // verify source and target
+  if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp->basic.dev_id != src_id) {
+    //this registration is not between the two intended parties
+    sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
+    memset(rsp, 0, len);
+    return SCEWL_ERR;
+  }
 
-  /*    instantiate drbg    */
+  /*    process registration response    */
+  // copy the new info
+  bcopy((uint8_t *)SCEWL_IDS_DB, (uint8_t *)rsp->ids_db, sizeof(SCEWL_IDS_DB));
+  seq = rsp->seq;
+  bcopy((uint8_t *)KNOWN_SEQS, (uint8_t *)rsp->known_seqs, sizeof(KNOWN_SEQS));
+  bcopy(depl_nonce, rsp->depl_nonce, sizeof(depl_nonce));
+
+  // unlock ECC keys
+  AES_init_ctx_iv(&aes_ctx, rsp->cryptkey, rsp->cryptiv);
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)ECC_PUBLICS_DB, sizeof(ECC_PUBLICS_DB));
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)BRDCST_PUBLIC, sizeof(BRDCST_PUBLIC));
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)ECC_PRIVATE_KEY, sizeof(ECC_PRIVATE_KEY));
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)BRDCST_PRIVATE_KEY, sizeof(BRDCST_PRIVATE_KEY));
+
+  // scramble entropy
+  AES_init_ctx_iv(&aes_ctx, rsp->entropky, rsp->entriv);
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)ENTROPY, sizeof(ENTROPY));
+  AES_CTR_xcrypt_buffer(&aes_ctx, (uint8_t *)NONCE, sizeof(NONCE));
+  /***************************************/
+
+  // instantiate drbg
   if (sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8) != SB_SUCCESS) {
+    //failed to initialize random generator
+    sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
+    memset(rsp, 0, len);
     return SCEWL_ERR;
   }
   seed_idx++; seed_idx %= NUM_SEEDS;
-  /**************************/
 
   // successfully registered
   registered = 1;
   sss_internal(SCEWL_OK, SCEWL_SSS_REG);
+  memset(rsp, 0, len);
   return SCEWL_OK;
 }
 

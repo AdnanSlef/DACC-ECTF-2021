@@ -53,7 +53,7 @@ siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+
 
 int main(void) {
   scewl_id_t src_id, tgt_id;
-  uint16_t len = 0x4000;
+  uint16_t len = 0x100;
   char msg[BUF_SZ+1] = "hello to world!~";
   char data[BUF_SZ+1];
   struct timeval start, end;
@@ -89,10 +89,11 @@ int main(void) {
     }
   }
   
-  //delay the 15th SED due to sock buffer caps
+  /*delay the 15th SED due to sock buffer caps*
   if (SCEWL_ID > 24) {
     sleep(70);
   }
+  */
 
   /* test message of length len */
   fprintf(log, "%d Sending %xB hello...\n", SCEWL_ID, len);

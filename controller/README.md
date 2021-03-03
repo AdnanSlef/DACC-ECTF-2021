@@ -22,6 +22,8 @@ The SCEWL Bus Controller is built from several files:
   `2c_build_controller.Dockerfile` during the `make add_sed` command. Deleted after
   build is performed.
 
+Documentation for the Controller is found in `controller.h`.
+
 ## Crypto Libraries
 Our design relies on a number of crypto libraries to provide cryptographic functionality.
 These are included as submodules.
