@@ -4,6 +4,11 @@ System CTF (eCTF). This code was designed with security in mind,
 preparing for the attack phase in which opposing teams will
 attempt to exploit our design.
 
+## Documentation
+Make sure to check out the documentation.
+Our SCEWL Bus Controller code is documented in [controller.h](controller/controller.h), including the structs used for various communications.
+Our high-level Design Document is also available at [Design Document](Design_Document.pdf).
+
 ## Getting Started
 Please see the [Getting Started Guide](getting_started.md).
 
