@@ -17,6 +17,7 @@ import argparse
 import logging
 import os
 from typing import NamedTuple
+from Crypto.Random import get_random_bytes
 
 
 SSS_IP = 'localhost'
@@ -31,7 +32,9 @@ Device = NamedTuple('Device', [('id', int), ('status', int), ('csock', socket.so
 
 
 class SSS:
-    def __init__(self, sockf):
+    def __init__(self, sockf, depl_nonce):
+        self.depl_nonce = depl_nonce
+
         # Make sure the socket does not already exist
         try:
             os.unlink(sockf)
@@ -128,8 +131,15 @@ def main():
 
     # Here is where deploy-time tasks are run
 
+    # generate depl_nonce
+    depl_nonce = get_random_bytes(16)
+    # TODO pull mapping to SSS RAM
+    # TODO pull AUTH dict to SSS RAM, {scewl_id : auth_token}
+
+    ### End deploy-time tasks
+
     # map of SCEWL IDs to statuses
-    sss = SSS(args.sockf)
+    sss = SSS(args.sockf, depl_nonce)
 
     sss.start()
 
