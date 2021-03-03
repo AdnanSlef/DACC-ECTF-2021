@@ -7,13 +7,13 @@ attempt to exploit our design.
 ## Documentation
 Make sure to check out the documentation.
 Our SCEWL Bus Controller code is documented in [controller.h](controller/controller.h), including the structs used for various communications.
+Our SCEWL Security Server is documented in the [sss readme](sss/README.md).
 Our high-level Design Document is also available at [Design Document](Design_Document.pdf).
 
 ## Getting Started
 Please see the [Getting Started Guide](getting_started.md).
 
-Also see the distributed documentation for a guide to the design and
-features of this code.
+Also see the distributed documentation for a guide to the design and features of this code.
 
 ## Project Structure
 The project code is structured as follows
@@ -23,6 +23,6 @@ The project code is structured as follows
 * `dockerfiles/` - Contains all Dockerfiles to build system
 * `radio/` - Contains the Radio Waves Emulator
 * `socks/` - Directory to hold sockets for the network backend
-* `sss/` - Contains the Scewl Security Server and a deployment helper program
+* `sss/` - Contains the Scewl Security Server and a deployment helper program. See [SSS README](sss/README.md)
 * `tools/` - Miscellaneous tools to run and interract with deployments
 * `Makefile` - Root Makefile to build deployments
