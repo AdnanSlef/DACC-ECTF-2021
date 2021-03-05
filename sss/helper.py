@@ -72,13 +72,12 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
     with open(f'/secrets/{depl_id}.crypt', 'wb') as f:
         f.write(cryptkey)
         f.write(cryptiv)
-    ctr = Counter.new(128, initial_value=bytes_to_long(cryptiv), little_endian=1) #TODO verify endianness
+    ctr = Counter.new(128, initial_value=bytes_to_long(cryptiv), little_endian=0) #TODO verify endianness
     cipher = AES.new(cryptkey, AES.MODE_CTR, counter=ctr)
-    _pubkeys = [cipher.encrypt(x) for x in pubkeys]
-    _brdcst_public = cipher.encrypt(brdcst_public)
-    _privkey = cipher.encrypt(privkey)
-    _brdcst_privkey = cipher.encrypt(brdcst_privkey)
-    # TODO remove underscores
+    pubkeys = [cipher.encrypt(x) for x in pubkeys]
+    brdcst_public = cipher.encrypt(brdcst_public)
+    privkey = cipher.encrypt(privkey)
+    brdcst_privkey = cipher.encrypt(brdcst_privkey)
 
     # Create header file with secrets for SED Controller usage
     secrets = f"""
