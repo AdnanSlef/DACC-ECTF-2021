@@ -18,6 +18,7 @@ import argparse
 import logging
 import os
 import json
+from hmac import compare_digest
 from typing import NamedTuple
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Random import get_random_bytes
@@ -35,6 +36,10 @@ Device = NamedTuple('Device', [('id', int), ('csock', socket.socket)])
 
 sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
 
+# determine whether bytes objects are equivalent
+def bequal(chall, guess):
+    return compare_digest(guess, chall)
+
 # make sure dict from json has correct types
 def intify(d):
     return dict(zip( map(int,d.keys()), map(int,d.values()) ))
@@ -48,7 +53,7 @@ def realrecv(csock, n):
 
         # check for closed connection
         if not recvd:
-            logging.debug('Detected closed connection while trying to recv {n} bytes')
+            logging.debug(f'Detected closed connection while trying to recv {n} bytes')
             raise ConnectionResetError
     return data
 
@@ -68,6 +73,7 @@ class SSS:
     def __init__(self, sockf, depl_nonce, mapping, auth):
         self.depl_nonce = depl_nonce
         self.mapping = mapping
+        self.reverse_map = {scewl_id:depl_id for depl_id, scewl_id in mapping.items()}
         self.auth = auth
 
         # Make sure the socket does not already exist
@@ -82,6 +88,7 @@ class SSS:
         self.sock.listen(20)
 
         self.devs = {}
+        self.registered = []
     
     @staticmethod
     def sock_ready(sock, op='r'):
@@ -142,7 +149,7 @@ typedef struct sss_reg_rsp_t {
         realsend(csock, rsp)
         
         # register in the SSS
-        self.devs[dev_id] = Device(dev_id, csock)
+        self.registered.append(dev_id)
 
 
     def handle_deregistration(self, dev_id, csock):
@@ -151,14 +158,28 @@ typedef struct sss_reg_rsp_t {
         logging.debug(f'Received deregistration buffer: {repr(data)}')
 
         #todo unpack deregistration request
+        '''
+// deregistration request message (2080B)
+typedef struct sss_dereg_req_t {
+  scewl_sss_msg_t basic;
+  uint32_t padding;
+  uint8_t auth[16];
+  uint64_t seq;
+  uint64_t known_seqs[DEPL_COUNT];
+} sss_dereg_req_t;
+        '''
+
         #todo verify authentication token
         #todo store seq and known_seqs
 
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
-
+        
+        # send deregistration response to SED
         logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
         realsend(csock, rsp)
-        raise ConnectionResetError("Server loop, please clean this up for me")
+        
+        # deregister in the SSS
+        self.registered.remove(dev_id)
 
 
     def handle_transaction(self, csock: socket.SocketType):
@@ -171,15 +192,18 @@ typedef struct sss_reg_rsp_t {
         #unpack basic request
         _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
 
-        logging.info(f"{len(self.devs)} devices are registered")
+        # attribute socket
+        self.devs[dev_id] = Device(dev_id, csock)
+
+        logging.info(f"{{ {self.registered} }} devices are registered")
 
         # handle registration
-        if op == REG and dev_id not in self.devs and len(self.devs)<16:# and self.sock_ready(csock):
+        if op == REG and dev_id not in self.registered and len(self.registered)<16:
             logging.info(f'{dev_id} is asking to register')
             self.handle_registration(dev_id, csock)
 
         # handle deregistration
-        elif op == DEREG and dev_id in self.devs:# and self.sock_ready(csock):
+        elif op == DEREG and dev_id in self.registered:
             logging.info(f'{dev_id} is asking to deregister')
             self.handle_deregistration(dev_id, csock)
 

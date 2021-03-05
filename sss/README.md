@@ -20,7 +20,7 @@ The SCEWL Security Server uses several files:
   one of the deployment secrets files.
 * `/secrets/mapping`: Maps between SCEWL IDs and deployment IDs. Updated at `add_sed` and `remove_sed`.
 * `/secrets/auth`: Stores the authorization tokens for registration/deregistration of each SED.
-  Updated at `add_sed` and `remove_sed`.
+  Created at `create_deployment` and updated at `remove_sed`.
 * `/secrets/{id}.vault`: Stores data on disk for the SED.
 
 ## Data Fields
@@ -56,3 +56,4 @@ The following fields are exchanged in these messages (see `/controller/controlle
   * randomly generated at `create_deployment` in depl secrets and `/secrets/auth`
   * dict pulled to SSS RAM at `deploy`, `{scewl_id : auth_token}`
   * verified at registration and deregistration before performing operation
+  * clobbered at `remove_sed`
