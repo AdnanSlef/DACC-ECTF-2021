@@ -425,6 +425,8 @@ int secure_deregister(void) {
     req->basic.op = SCEWL_SSS_DEREG;
     bcopy(req->auth, AUTH, sizeof(req->auth));
     req->seq = seq;
+    reg_debug_str("sending back seq {seq}");
+    reg_debug_struct(req->seq);
     bcopy((uint8_t *)req->known_seqs, (uint8_t *)KNOWN_SEQS, sizeof(req->known_seqs));
 
     // send deregistration request

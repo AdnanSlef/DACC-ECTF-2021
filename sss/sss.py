@@ -166,6 +166,13 @@ typedef struct sss_reg_rsp_t {
 
 
     def handle_deregistration(self, dev_id, csock):
+        #define deployment id
+        try:
+            depl_id = self.reverse_map[dev_id]
+        except:
+            logging.info("failed reverse lookup in registration")
+            return
+
         # receive rest of deregistration request
         data = realrecv(csock, sizeof['sss_dereg_req_t'] - sizeof['scewl_sss_msg_t'])
         logging.debug(f'Received deregistration buffer: {repr(data)}')
@@ -183,6 +190,7 @@ typedef struct sss_dereg_req_t {
         '''
         padding, auth, seq = struct.unpack('<I16sQ', data[:28])
         known_seqs = struct.unpack('<256Q', data[28:])
+        logging.debug(f"got known seqs {known_seqs}")
         
         # verify authentication token
         if not bequal(self.auth[dev_id], auth):
@@ -191,8 +199,12 @@ typedef struct sss_dereg_req_t {
         logging.info(f"{dev_id} passed deregistration auth")
         
         #store seq and known_seqs in vault
-        #TODO
+        sequences = {'seq':seq, 'known_seqs':known_seqs}
+        with open(f'/secrets/{depl_id}.seqs','w') as f:
+            json.dump(sequences, f)
+        logging.debug("writing seqs {json.dumps(sequences)}")
 
+        # form deregistration response
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
         
         # send deregistration response to SED
