@@ -109,10 +109,6 @@ all: ${COMPILER}/sb_sw_lib.o
 endif
 ################# end sweet-b inclusion #################
 
-# Show memory usage (TODO remove)
-LDFLAGS+=--print-memory-usage
-CFLAGS+=-Wstack-usage=1000
-
 # Optimize for speed
 CFLAGS+=-O2
 
