@@ -101,7 +101,7 @@ typedef struct sss_reg_rsp_t {
         basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)#todo len
         padding = struct.pack('>I', 0xC001DACC)
         ids_db = struct.pack('<256H', *self.create_map(dev_id)) #todo make map file and pull it
-        seq = 0 #todo set and store seq
+        seq = struct.pack('<Q', 0) #todo set and store seq
         known_seqs = struct.pack('<256Q', *[0]*256) #todo set and store known_seqs
         cryptkey = b'\0'*16 #todo set crypt key/iv
         cryptiv = b'\0'*16
