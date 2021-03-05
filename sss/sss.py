@@ -143,8 +143,10 @@ typedef struct sss_reg_rsp_t {
         basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, sizeof['sss_reg_rsp_t'], dev_id, REG)
         padding = struct.pack('>I', 0xC001DACC)
         ids_db = struct.pack('<256H', *self.create_map(dev_id))
-        seq = struct.pack('<Q', 1) #TODO set and store seq
-        known_seqs = struct.pack('<256Q', *[0]*256) #TODO set and store known_seqs
+        with open(f'/secrets/{depl_id}.seqs','r') as f:
+            sequences = json.load(f)
+        seq = struct.pack('<Q', sequences['seq'])
+        known_seqs = struct.pack('<256Q', *sequences['known_seqs'])
         with open(f'/secrets/{depl_id}.crypt','rb') as f:
             cryptkey = f.read(16)
             cryptiv = f.read(16)
@@ -165,7 +167,7 @@ typedef struct sss_reg_rsp_t {
 
     def handle_deregistration(self, dev_id, csock):
         # receive rest of deregistration request
-        data = realrecv(csock, 0)#sizeof['sss_dereg_req_t'] - sizeof['scewl_sss_msg_t'])
+        data = realrecv(csock, sizeof['sss_dereg_req_t'] - sizeof['scewl_sss_msg_t'])
         logging.debug(f'Received deregistration buffer: {repr(data)}')
 
         #unpack deregistration request
@@ -179,11 +181,8 @@ typedef struct sss_dereg_req_t {
   uint64_t known_seqs[DEPL_COUNT];
 } sss_dereg_req_t;
         '''
-        '''TODO uncomment
         padding, auth, seq = struct.unpack('<I16sQ', data[:28])
         known_seqs = struct.unpack('<256Q', data[28:])
-        '''
-        auth = self.auth[dev_id] #TODO remove
         
         # verify authentication token
         if not bequal(self.auth[dev_id], auth):

@@ -79,6 +79,11 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
     privkey = cipher.encrypt(privkey)
     brdcst_privkey = cipher.encrypt(brdcst_privkey)
 
+    # Make a space to store sequence numbers in SSS
+    seq_storage = {'seq':1,'known_seqs':[0]*DEPL_COUNT}
+    with open(f'/secrets/{depl_id}.seqs', 'w') as f:
+        json.dump(seq_storage, f)
+
     # Create header file with secrets for SED Controller usage
     secrets = f"""
 #ifndef SECRETS_H

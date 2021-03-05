@@ -399,7 +399,7 @@ int secure_register(void) {
 
 
 int secure_deregister(void) {
-  //TODO declare locals
+  // declare locals
   sss_dereg_req_t *req = (sss_dereg_req_t *)buf;
   sss_dereg_rsp_t rsp;
   scewl_id_t src_id, tgt_id;
@@ -409,6 +409,7 @@ int secure_deregister(void) {
   if (!registered) {
     sss_internal(SCEWL_ALREADY, SCEWL_SSS_DEREG);
     //not yet registered
+    reg_debug_str("dereg attempted before reg");
     return SCEWL_ERR;
   }
 
@@ -433,12 +434,14 @@ int secure_deregister(void) {
     len = read_msg(SSS_INTF, (char *)&rsp, &src_id, &tgt_id, sizeof(rsp), 1);
     if (len != sizeof(rsp) || rsp.basic.op != SCEWL_SSS_DEREG) {
       //did not receive a complete deregistration response
+      reg_debug_str("not a complete dereg");
       continue;
     }
     
     // verify source and target
-    if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp.basic.dev_id != src_id) {
+    if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp.basic.dev_id != SCEWL_ID) {
       //this deregistration is not between the two intended parties
+      reg_debug_str("wrong parties dereg");
       continue;
     }
 
@@ -449,6 +452,7 @@ int secure_deregister(void) {
 
   // hang until power down
   sss_internal(SCEWL_OK, SCEWL_SSS_DEREG);
+  reg_debug_str("successful deregistration; woohoo!");
   while(1){/* spin merrily in circles */}
 
 }
@@ -779,14 +783,6 @@ int main() {
   intf_init(CPU_INTF);
   intf_init(SSS_INTF);
   intf_init(RAD_INTF);
-
-  // debug struct sizes
-  uint32_t reg_req = sizeof(sss_reg_req_t), reg_rsp = sizeof(sss_reg_rsp_t), dereg_req = sizeof(sss_dereg_req_t), dereg_rsp = sizeof(sss_dereg_rsp_t);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 64, "reg_req, reg_rsp, dereg_req, dereg_rsp sizes:");
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &reg_req);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &reg_rsp);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &dereg_req);
-  send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, 4, &dereg_rsp);
 
   // serve forever
   while (1) {
