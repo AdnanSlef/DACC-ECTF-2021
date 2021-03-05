@@ -42,12 +42,21 @@ def realrecv(csock, n):
 
         # check for closed connection
         if not recvd:
-            logging.debug('Detected closed connection when looking for registration req')
+            logging.debug('Detected closed connection while trying to recv {n} bytes')
             raise ConnectionResetError
+
 
 # try to send a whole buffer
 def realsend(csock, buf):
-    pass
+    totalsent = 0
+    while totalsent < len(buf):
+        sent = csock.send(buf[totalsent:])
+
+        # check for closed connection
+        if not sent:
+            logging.debug('Detected closed connection when looking for registration req')
+            raise ConnectionResetError
+        totalsent += sent
 
 class SSS:
     def __init__(self, sockf, depl_nonce, mapping, auth):
@@ -84,15 +93,7 @@ class SSS:
 
     def handle_registration(self, dev_id, csock):
         # receive rest of registration request
-        data = b''
-        while len(data) < 0:#todo set to 16
-            recvd = csock.recv(16 - len(data))
-            data += recvd
-
-            # check for closed connection
-            if not recvd:
-                logging.debug('Detected closed connection when looking for registration req')
-                raise ConnectionResetError
+        data = realrecv(csock, 0) #todo 16
         logging.debug(f'Received registration buffer: {repr(data)}')
         auth = data
         
@@ -132,7 +133,7 @@ typedef struct sss_reg_rsp_t {
 
         # send registration response to SED
         logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
-        csock.send(rsp)
+        realsend(csock, rsp)
         
         # register in the SSS
         self.devs[dev_id] = Device(dev_id, csock)
@@ -155,7 +156,7 @@ typedef struct sss_reg_rsp_t {
 
         logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
         csock.send(rsp)
-        del self.devs[dev_id]
+        raise ConnectionResetError("Server loop, please clean this up for me")
 
     def handle_transaction(self, csock: socket.SocketType):
         logging.debug('handling transaction')
@@ -173,6 +174,7 @@ typedef struct sss_reg_rsp_t {
         logging.debug(f'Received buffer: {repr(data)}')
         _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
 
+        logging.info(f"{len(self.devs)} devices are registered")
         # requesting registration
         if op == REG and dev_id not in self.devs and len(self.devs)<16:# and self.sock_ready(csock):
             logging.info(f'{dev_id} is asking to register')
