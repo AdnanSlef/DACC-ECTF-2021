@@ -35,6 +35,10 @@ Device = NamedTuple('Device', [('id', int), ('csock', socket.socket)])
 
 sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
 
+# make sure dict from json has correct types
+def intify(d):
+    return dict(zip( map(int,d.keys()), map(int,d.values()) ))
+
 # try to recv a whole buffer
 def realrecv(csock, n):
     data = b''
@@ -95,7 +99,7 @@ class SSS:
 
     def handle_registration(self, dev_id, csock):
         # receive rest of registration request
-        data = realrecv(csock, 0) #todo 16
+        data = realrecv(csock, 0)#sizeof['sss_reg_req_t']-sizeof['scewl_sss_msg_t'])
         logging.debug(f'Received registration buffer: {repr(data)}')
         auth = data
         
@@ -130,7 +134,7 @@ typedef struct sss_reg_rsp_t {
 
         # craft response from components
         rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
-        logging.debug(f'Registration response would be ({len(rsp)}B){repr(rsp)}') #todo remove
+        logging.debug(f'Registration response would be ({len(rsp)}B) {repr(rsp)}') #todo remove
         rsp = basic #todo remove
 
         # send registration response to SED
@@ -143,7 +147,7 @@ typedef struct sss_reg_rsp_t {
 
     def handle_deregistration(self, dev_id, csock):
         # receive rest of deregistration request
-        data = realrecv(csock, 0) #todo length of dereg request
+        data = realrecv(csock, 0)#sizeof['sss_dereg_req_t'] - sizeof['scewl_sss_msg_t'])
         logging.debug(f'Received deregistration buffer: {repr(data)}')
 
         #todo unpack deregistration request
@@ -231,19 +235,24 @@ def parse_args():
 
 # pulls scewl <--> depl id mapping from disk
 def get_mapping():
-    return {0:10,1:11} #TODO
+    #return {0:10,1:11}
+    with open('/secrets/mapping','r') as f:
+        mapping = json.load(f)
+    logging.debug(f"Found mapping on disk: {intify(mapping)}")
+    return intify(mapping)
 
 # pulls authentication tokens from disk
 def get_auth(mapping):
     with open('/secrets/auth','r') as f:
         tokens = json.load(f)
+    tokens = intify(tokens)
     useful_tokens = {}
     for depl_id in tokens:
         try:
-            scewl_id = mapping[int(depl_id)]
+            scewl_id = mapping[depl_id]
             useful_tokens[scewl_id] = long_to_bytes(tokens[depl_id],16)
         except Exception as e:
-            logging.debug(f"{depl_id} unused ({e})")
+            logging.debug(f"{depl_id} unused")
     return useful_tokens
 
 def main():

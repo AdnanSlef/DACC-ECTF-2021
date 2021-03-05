@@ -136,6 +136,17 @@ def assign_secrets(SCEWL_ID):
     with open(f"/secrets/{SCEWL_ID}.secret",'w') as of:
         of.write(secrets)
 
+    # inform the SSS of this assignment
+    try:
+        with open('/secrets/mapping','r') as idf:
+            mapping = json.load(idf)
+    except:
+        mapping = {}
+    mapping[depl_id] = SCEWL_ID
+    with open('/secrets/mapping','w') as idf:
+        json.dump(mapping, idf)
+        
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', nargs=1, choices = COMMANDS)
