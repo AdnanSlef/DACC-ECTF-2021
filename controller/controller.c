@@ -21,20 +21,6 @@
 #include "sb_all.h"
 #endif
 
-#if 0 //SCEWL_ID==10
-#define DEBUG_TO_FAA
-#endif
-#ifdef DEBUG_TO_FAA
-#define debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
-#define debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
-#else
-#define debug_str(M) do{}while(0)
-#define debug_struct(M) do{}while(0)
-#endif
-
-
-#define reg_debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
-#define reg_debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
 
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ+sizeof(secure_hdr_t)];
@@ -154,7 +140,6 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
   // find header start
   do {
-    debug_struct(hdr);
     hdr.magicC = 0;
 
     if (intf_read(intf, (char *)&hdr.magicS, 1, blocking) == INTF_NO_DATA) {
@@ -164,7 +149,6 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
     // check for SC
     if (hdr.magicS == 'S') {
       do {
-        debug_str("^ trying to read magic C");
         if (intf_read(intf, (char *)&hdr.magicC, 1, blocking) == INTF_NO_DATA) {
           return SCEWL_NO_MSG;
         }
@@ -173,12 +157,10 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
   } while (hdr.magicS != 'S' || hdr.magicC != 'C');
 
   // read rest of header
-  debug_str("trying to read rest of header");
   read = intf_read(intf, (char *)&hdr + 2, sizeof(scewl_hdr_t) - 2, blocking);
   if(read == INTF_NO_DATA) {
     return SCEWL_NO_MSG;
   }
-  debug_struct(hdr);
 
   // unpack header
   *src_id = hdr.src_id;
@@ -190,7 +172,6 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
   // throw away rest of message if too long
   for (int i = 0; hdr.len > max && i < hdr.len - max; i++) {
-    if (i == 0) {i = hdr.len - max; debug_str("extra bytes:"); debug_struct(i); i=0;}
     intf_readb(intf, 0);
   }
 
@@ -201,7 +182,6 @@ int read_msg(intf_t *intf, char *data, scewl_id_t *src_id, scewl_id_t *tgt_id,
 
   // discard unwanted frames
   if (!l2_filter(intf, hdr.src_id, hdr.tgt_id)) {
-    debug_str("filtering scewl frame");
     return SCEWL_NO_MSG;
   }
   
@@ -340,10 +320,6 @@ int secure_register(void) {
     //did not receive a complete registration response
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
-    reg_debug_str("incomplete registration or bad op");
-    int opright = rsp->basic.op == SCEWL_SSS_REG;
-    reg_debug_struct(len);
-    reg_debug_struct(*rsp);
     return SCEWL_ERR;
   }
 
@@ -352,10 +328,6 @@ int secure_register(void) {
     //this registration is not between the two intended parties
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
-    reg_debug_str("bad source or target (src_id, tgt_id, dev_id)");
-    reg_debug_struct(src_id);
-    reg_debug_struct(tgt_id);
-    reg_debug_struct(rsp->basic.dev_id);
     return SCEWL_ERR;
   }
 
@@ -384,7 +356,6 @@ int secure_register(void) {
     //failed to initialize random generator
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
-    reg_debug_str("couldnt start drbg");
     return SCEWL_ERR;
   }
   seed_idx++; seed_idx %= NUM_SEEDS;
@@ -393,7 +364,6 @@ int secure_register(void) {
   registered = 1;
   sss_internal(SCEWL_OK, SCEWL_SSS_REG);
   memset(rsp, 0, len);
-  reg_debug_str("successful registration; woohoo!");
   return SCEWL_OK;
 }
 
@@ -409,7 +379,6 @@ int secure_deregister(void) {
   if (!registered) {
     sss_internal(SCEWL_ALREADY, SCEWL_SSS_DEREG);
     //not yet registered
-    reg_debug_str("dereg attempted before reg");
     return SCEWL_ERR;
   }
 
@@ -425,8 +394,6 @@ int secure_deregister(void) {
     req->basic.op = SCEWL_SSS_DEREG;
     bcopy(req->auth, AUTH, sizeof(req->auth));
     req->seq = seq;
-    reg_debug_str("sending back seq {seq}");
-    reg_debug_struct(req->seq);
     bcopy((uint8_t *)req->known_seqs, (uint8_t *)KNOWN_SEQS, sizeof(req->known_seqs));
 
     // send deregistration request
@@ -436,14 +403,12 @@ int secure_deregister(void) {
     len = read_msg(SSS_INTF, (char *)&rsp, &src_id, &tgt_id, sizeof(rsp), 1);
     if (len != sizeof(rsp) || rsp.basic.op != SCEWL_SSS_DEREG) {
       //did not receive a complete deregistration response
-      reg_debug_str("not a complete dereg");
       continue;
     }
     
     // verify source and target
     if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp.basic.dev_id != SCEWL_ID) {
       //this deregistration is not between the two intended parties
-      reg_debug_str("wrong parties dereg");
       continue;
     }
 
@@ -454,7 +419,6 @@ int secure_deregister(void) {
 
   // hang until power down
   sss_internal(SCEWL_OK, SCEWL_SSS_DEREG);
-  reg_debug_str("successful deregistration; woohoo!");
   while(1){/* spin merrily in circles */}
 
 }
@@ -800,25 +764,18 @@ int main() {
 
       // handle outgoing message from CPU
       if (intf_avail(CPU_INTF)) {
-        debug_str("CPU_INTF was avail");
         // Read message from CPU
         len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len==SCEWL_NO_MSG) continue;
 
         if (tgt_id == SCEWL_BRDCST_ID) {
-          if(!secure_send(buf, tgt_id, len)) {
-            debug_str("failed to secure broadcast");
-          }
-          else {debug_str("successful secure brdcst");}
+          secure_send(buf, tgt_id, len);
         } else if (tgt_id == SCEWL_SSS_ID) {
           handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
         } else {
-          if (!secure_send(buf, tgt_id, len)) {
-            debug_str("failed to secure direct transmit");
-          }
-          else {debug_str("successful secure direct transmit");}
+          secure_send(buf, tgt_id, len);
         }
 
         continue;
@@ -826,7 +783,6 @@ int main() {
 
       // handle incoming radio message
       if (intf_avail(RAD_INTF)) {
-        debug_str("RAD_INTF was avail");
         // Read message from antenna
         len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len == SCEWL_NO_MSG) continue;
@@ -835,17 +791,11 @@ int main() {
           if (src_id == SCEWL_FAA_ID) {
             handle_faa_recv(buf, len);
           }
-          if (!secure_recv(buf, src_id, len, 1)) {
-            debug_str("failed to secure broadcast recv");
-          }
-          else {debug_str("successful secure brdcst recv");}
+          secure_recv(buf, src_id, len, 1);
         } else if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
         } else {
-          if (!secure_recv(buf, src_id, len, 0)) {
-            debug_str("failed to secure direct recv");
-          }
-          else {debug_str("successful secure direct recv");}
+          secure_recv(buf, src_id, len, 0);
         }
       }
     }
