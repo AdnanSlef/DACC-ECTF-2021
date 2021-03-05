@@ -2,13 +2,14 @@
 
 # 2021 Collegiate eCTF
 # SCEWL Security Server
-# Ben Janis
 #
-# (c) 2021 The MITRE Corporation
+# 0xDACC
+# Adrian Self
+# Delaware Area Career Center
 #
-# This source file is part of an example system for MITRE's 2021 Embedded System CTF (eCTF).
-# This code is being provided only for educational purposes for the 2021 MITRE eCTF competition,
-# and may not meet MITRE standards for quality. Use this code at your own risk!
+# This source file is part of our design for MITRE's 2021 Embedded System CTF (eCTF).
+# It provides secure registration and deregistration to supoprt Scewl Enabled Devices
+# including UAVs, enabling secure communication between devices.
 
 import socket
 import select
@@ -17,21 +18,27 @@ import argparse
 import logging
 import os
 from typing import NamedTuple
+from Crypto.Random import get_random_bytes
 
 
-SSS_IP = 'localhost'
 SSS_ID = 1
+DEPL_COUNT = 256
 
-# mirroring scewl_sss_op_t enum at controller.h:55 and scewl_bus.h:53
+# mirroring scewl_sss_op_t enum at scewl_bus.h:53
 ALREADY, REG, DEREG = -1, 0, 1
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
-Device = NamedTuple('Device', [('id', int), ('status', int), ('csock', socket.socket)])
+Device = NamedTuple('Device', [('id', int), ('csock', socket.socket)])
 
+sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
 
 class SSS:
-    def __init__(self, sockf):
+    def __init__(self, sockf, depl_nonce, mapping, auth):
+        self.depl_nonce = depl_nonce
+        self.mapping = mapping
+        self.auth = auth
+
         # Make sure the socket does not already exist
         try:
             os.unlink(sockf)
@@ -41,16 +48,86 @@ class SSS:
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.bind(sockf)
-        self.sock.listen(10)
+        self.sock.listen(20)
+
         self.devs = {}
     
     @staticmethod
     def sock_ready(sock, op='r'):
         rready, wready, _ = select.select([sock], [sock], [], 0)
         return rready if op == 'r' else wready
+    
+    # prepare the SCEWL <--> DEPL mapping for an SED
+    def create_map(self, SCEWL_ID):
+        BAD_ID = SCEWL_ID
+        arr = [BAD_ID] * DEPL_COUNT
+        for depl_id in range(DEPL_COUNT):
+            if depl_id in self.mapping:
+                arr[depl_id] = self.mapping[depl_id]
+        return arr
+
+    def handle_registration(self, dev_id, csock):
+        # receive rest of registration request
+        data = b''
+        while len(data) < 0:#todo set to 16
+            recvd = csock.recv(16 - len(data))
+            data += recvd
+
+            # check for closed connection
+            if not recvd:
+                logging.debug('Detected closed connection when looking for registration req')
+                raise ConnectionResetError
+        logging.debug(f'Received registration buffer: {repr(data)}')
+        auth = data
+        
+        #todo verify authentication token
+
+        # form a registration response
+        '''
+// registration response message (2656B)
+typedef struct sss_reg_rsp_t {
+  scewl_sss_msg_t basic;
+  uint32_t padding;
+  uint16_t ids_db[DEPL_COUNT];     //maps SCEWL ids to deployment ids
+  uint64_t seq;                    //this SED's sequence number
+  uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
+  uint8_t  cryptkey[16]; //key to unlock ecc
+  uint8_t  cryptiv[16];  // iv to unlock ecc
+  uint8_t  entropky[16]; //just random bytes
+  uint8_t  entriv[16];   //"               "
+  uint8_t  depl_nonce[16];   //replay protection
+} sss_reg_rsp_t;
+        '''
+        basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)#todo len
+        padding = struct.pack('>I', 0xC001DACC)
+        ids_db = struct.pack('<256H', *self.create_map(dev_id)) #todo make map file and pull it
+        seq = struct.pack('<Q', 0) #todo set and store seq
+        known_seqs = struct.pack('<256Q', *[0]*256) #todo set and store known_seqs
+        cryptkey = b'\0'*16 #todo set crypt key/iv
+        cryptiv = b'\0'*16
+        entropky = get_random_bytes(16)
+        entriv = get_random_bytes(16)
+        depl_nonce = self.depl_nonce
+
+        rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
+        logging.debug(f'Registration response would be ({len(rsp)}B){repr(rsp)}')
+        rsp = basic #todo remove
+
+        logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
+        csock.send(rsp)
+        self.devs[dev_id] = Device(dev_id, csock)
+
+    def handle_deregistration(self, dev_id, csock):
+        rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
+
+        logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
+        csock.send(rsp)
+        del self.devs[dev_id]
 
     def handle_transaction(self, csock: socket.SocketType):
         logging.debug('handling transaction')
+
+        # receive basic req
         data = b''
         while len(data) < 12:
             recvd = csock.recv(12 - len(data))
@@ -58,24 +135,26 @@ class SSS:
 
             # check for closed connection
             if not recvd:
+                logging.debug('Detected closed connection when looking for basic req')
                 raise ConnectionResetError
         logging.debug(f'Received buffer: {repr(data)}')
-        _, _, _, _, dev_id, op = struct.unpack('<HHHHHH', data)
+        _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
 
-        # requesting repeat transaction
-        if dev_id in self.devs and self.devs[dev_id].status == op:
-            resp_op = ALREADY
-            logging.info(f'{dev_id}:already {"Registered" if op == REG else "Deregistered"}')
-        # record transaction
+        # requesting registration
+        if op == REG and dev_id not in self.devs and len(self.devs)<16:# and self.sock_ready(csock):
+            logging.info(f'{dev_id} is asking to register')
+            self.handle_registration(dev_id, csock)
+
+        # requesting deregistration
+        elif op == DEREG and dev_id in self.devs:# and self.sock_ready(csock):
+            logging.info(f'{dev_id} is asking to deregister')
+            self.handle_deregistration(dev_id, csock)
+
+        # no operation could be performed
         else:
-            self.devs[dev_id] = Device(dev_id, op, csock)
+            logging.info(f'{dev_id} was denied operation {op}')
             resp_op = op
-            logging.info(f'{dev_id}:{"Registered" if op == REG else "Deregistered"}')
 
-        # send response
-        resp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, resp_op)
-        logging.debug(f'Sending response {repr(data)}')
-        csock.send(resp)
 
     def start(self):
         unattributed_socks = set()
@@ -102,7 +181,7 @@ class SSS:
                     csock.close()
                     break
             
-            # check pool of attributed sockets first
+            # check pool of attributed sockets
             old_ids = []
             for dev in self.devs.values():
                 if dev.csock and self.sock_ready(dev.csock):
@@ -128,11 +207,28 @@ def main():
 
     # Here is where deploy-time tasks are run
 
-    # map of SCEWL IDs to statuses
-    sss = SSS(args.sockf)
+    # generate depl_nonce
+    depl_nonce = get_random_bytes(16)
 
+    # TODO pull mapping to SSS RAM, {depl_id : scewl_id}
+    mapping = {}
+
+    # TODO pull AUTH dict to SSS RAM, {scewl_id : auth_token}
+    auth = {}
+
+    ### End deploy-time tasks
+
+    # Construct SSS
+    sss = SSS(args.sockf, depl_nonce, mapping, auth)
+
+    # Serve in loop
     sss.start()
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.info(f'Dying with Exception: {e}')
+        while(1):
+            pass

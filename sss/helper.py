@@ -2,7 +2,10 @@
 
 # MITRE 2021 Collegiate Embedded Capture-The-Flag
 # Deployment Creation and SED Addition Helper Script
+#
+# 0xDACC
 # Adrian Self
+# Delaware Area Career Center
 
 import argparse
 import os
