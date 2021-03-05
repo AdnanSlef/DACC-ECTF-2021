@@ -44,7 +44,7 @@ def realrecv(csock, n):
         if not recvd:
             logging.debug('Detected closed connection while trying to recv {n} bytes')
             raise ConnectionResetError
-
+    return data
 
 # try to send a whole buffer
 def realsend(csock, buf):
@@ -138,49 +138,41 @@ typedef struct sss_reg_rsp_t {
         # register in the SSS
         self.devs[dev_id] = Device(dev_id, csock)
 
-    def handle_deregistration(self, dev_id, csock):
-        # receive rest of registration request
-        data = b''
-        while len(data) < 0:#todo set to 16
-            recvd = csock.recv(16 - len(data))
-            data += recvd
 
-            # check for closed connection
-            if not recvd:
-                logging.debug('Detected closed connection when looking for registration req')
-                raise ConnectionResetError
-        logging.debug(f'Received registration buffer: {repr(data)}')
-        auth = data
-        
+    def handle_deregistration(self, dev_id, csock):
+        # receive rest of deregistration request
+        data = realrecv(csock, 0) #todo length of dereg request
+        logging.debug(f'Received deregistration buffer: {repr(data)}')
+
+        #todo unpack deregistration request
+        #todo verify authentication token
+        #todo store seq and known_seqs
+
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
 
         logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
-        csock.send(rsp)
+        realsend(csock, rsp)
         raise ConnectionResetError("Server loop, please clean this up for me")
+
 
     def handle_transaction(self, csock: socket.SocketType):
         logging.debug('handling transaction')
 
-        # receive basic req
-        data = b''
-        while len(data) < 12:
-            recvd = csock.recv(12 - len(data))
-            data += recvd
+        # receive basic request
+        data = realrecv(csock, 12)
+        logging.debug(f'Received basic buffer: {repr(data)}')
 
-            # check for closed connection
-            if not recvd:
-                logging.debug('Detected closed connection when looking for basic req')
-                raise ConnectionResetError
-        logging.debug(f'Received buffer: {repr(data)}')
+        #unpack basic request
         _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
 
         logging.info(f"{len(self.devs)} devices are registered")
-        # requesting registration
+
+        # handle registration
         if op == REG and dev_id not in self.devs and len(self.devs)<16:# and self.sock_ready(csock):
             logging.info(f'{dev_id} is asking to register')
             self.handle_registration(dev_id, csock)
 
-        # requesting deregistration
+        # handle deregistration
         elif op == DEREG and dev_id in self.devs:# and self.sock_ready(csock):
             logging.info(f'{dev_id} is asking to deregister')
             self.handle_deregistration(dev_id, csock)
@@ -188,7 +180,6 @@ typedef struct sss_reg_rsp_t {
         # no operation could be performed
         else:
             logging.info(f'{dev_id} was denied operation {op}')
-            resp_op = op
 
 
     def start(self):
