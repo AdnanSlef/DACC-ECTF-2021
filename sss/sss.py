@@ -58,17 +58,61 @@ class SSS:
         return rready if op == 'r' else wready
     
     # prepare the SCEWL <--> DEPL mapping for an SED
-    def packed_map(self, SCEWL_ID):
+    def create_map(self, SCEWL_ID):
         BAD_ID = SCEWL_ID
         arr = [BAD_ID] * DEPL_COUNT
         for depl_id in range(DEPL_COUNT):
             if depl_id in self.mapping:
                 arr[depl_id] = self.mapping[depl_id]
-        struct.pack('<256H', *arr)
+        return arr
 
     def handle_registration(self, dev_id, csock):
-        rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)
+        # receive rest of registration request
+        data = b''
+        while len(data) < 0:#todo set to 16
+            recvd = csock.recv(16 - len(data))
+            data += recvd
+
+            # check for closed connection
+            if not recvd:
+                logging.debug('Detected closed connection when looking for registration req')
+                raise ConnectionResetError
+        logging.debug(f'Received registration buffer: {repr(data)}')
+        auth = data
         
+        #todo verify authentication token
+
+        # form a registration response
+        '''
+// registration response message (2656B)
+typedef struct sss_reg_rsp_t {
+  scewl_sss_msg_t basic;
+  uint32_t padding;
+  uint16_t ids_db[DEPL_COUNT];     //maps SCEWL ids to deployment ids
+  uint64_t seq;                    //this SED's sequence number
+  uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
+  uint8_t  cryptkey[16]; //key to unlock ecc
+  uint8_t  cryptiv[16];  // iv to unlock ecc
+  uint8_t  entropky[16]; //just random bytes
+  uint8_t  entriv[16];   //"               "
+  uint8_t  depl_nonce[16];   //replay protection
+} sss_reg_rsp_t;
+        '''
+        basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)#todo len
+        padding = struct.pack('>I', 0xC001DACC)
+        ids_db = struct.pack('<256H', *self.create_map(dev_id)) #todo make map file and pull it
+        seq = 0 #todo set and store seq
+        known_seqs = struct.pack('<256Q', *[0]*256) #todo set and store known_seqs
+        cryptkey = b'\0'*16 #todo set crypt key/iv
+        cryptiv = b'\0'*16
+        entropky = get_random_bytes(16)
+        entriv = get_random_bytes(16)
+        depl_nonce = self.depl_nonce
+
+        rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
+        logging.debug(f'Registration response would be ({len(rsp)}B){repr(rsp)}')
+        rsp = basic #todo remove
+
         logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
         csock.send(rsp)
         self.devs[dev_id] = Device(dev_id, csock)
