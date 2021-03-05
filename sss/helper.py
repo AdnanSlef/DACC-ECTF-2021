@@ -9,6 +9,7 @@
 
 import argparse
 import os
+import json
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Random import get_random_bytes
 import Crypto.PublicKey.ECC as ecc
@@ -54,7 +55,18 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
 
     # Authorize the SED as part of the deployment
     auth = get_random_bytes(16)
+    try:
+        with open('/secrets/auth','r') as f:
+            tokens = json.load(f)
+    except:
+        tokens = {}
+    tokens[depl_id] = bytes_to_long(auth)
+    with open('/secrets/auth','w') as f:
+        json.dump(tokens, f)
 
+    # Create vault file with secrets for SSS usage
+
+    # Create header file with secrets for SED Controller usage
     secrets = f"""
 #ifndef SECRETS_H
 #define SECRETS_H

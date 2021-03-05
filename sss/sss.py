@@ -17,7 +17,9 @@ import struct
 import argparse
 import logging
 import os
+import json
 from typing import NamedTuple
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Random import get_random_bytes
 
 
@@ -229,11 +231,20 @@ def parse_args():
 
 # pulls scewl <--> depl id mapping from disk
 def get_mapping():
-    return {} #TODO
+    return {0:10,1:11} #TODO
 
 # pulls authentication tokens from disk
-def get_auth():
-    return {} #TODO
+def get_auth(mapping):
+    with open('/secrets/auth','r') as f:
+        tokens = json.load(f)
+    useful_tokens = {}
+    for depl_id in tokens:
+        try:
+            scewl_id = mapping[int(depl_id)]
+            useful_tokens[scewl_id] = long_to_bytes(tokens[depl_id],16)
+        except Exception as e:
+            logging.debug(f"{depl_id} unused ({e})")
+    return useful_tokens
 
 def main():
     args = parse_args()
@@ -247,7 +258,8 @@ def main():
     mapping = get_mapping()
 
     # pull AUTH dict to SSS RAM, {scewl_id : auth_token}
-    auth = get_auth()
+    auth = get_auth(mapping)
+    logging.debug(f'auth = {auth}')
 
     ### End deploy-time tasks
 
