@@ -11,4 +11,5 @@ FROM ${DEPLOYMENT}/sss
 
 ARG SCEWL_ID
 
-# do whatever you need to remove the SED from the deployment
+# Eliminate secrets for this SED and remove it from deployment
+RUN /helper rmv

@@ -11,7 +11,7 @@ The SCEWL Security Server uses several files:
   in a loop, registering and deregistering SEDs.
 * `helper.py`: Helps with deployment, performing tasks for `create_deployment`, `add_sed`,
   and `remove_sed`.
-* `vault.py`: Handles storage of data for each SED. TODO: remove from readme if unused.
+* `vault.py`: Handles storage of data for each SED.
 * `/secrets`: On the SSS docker, the `/secrets` directory is used for data storage, including
   sensitive information.
 * `/secrets/depl_id_{id}`: The secrets file assigned to a deployment id. This is created at
@@ -21,7 +21,7 @@ The SCEWL Security Server uses several files:
 * `/secrets/mapping`: Maps between SCEWL IDs and deployment IDs. Updated at `add_sed` and `remove_sed`.
 * `/secrets/auth`: Stores the authorization tokens for registration/deregistration of each SED.
   Updated at `add_sed` and `remove_sed`.
-* `/secrets/{SCEWL_ID}.vault`: Stores data on disk for the SED. TODO: remove from readme if unused.
+* `/secrets/{id}.vault`: Stores data on disk for the SED.
 
 ## Data Fields
 The SSS interacts with the SCEWL Bus Controllers during registration and deregistration.

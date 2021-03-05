@@ -19,7 +19,7 @@ ECC_PRIVSIZE = 32
 ECC_PUBSIZE = ECC_PRIVSIZE * 2
 DEPL_COUNT = 256
 NUM_SEEDS = 256
-COMMANDS = ["before", "per"]
+COMMANDS = ["before", "per", "rmv"]
 
 # Create secrets files:
 def create_secrets_before():
@@ -146,6 +146,34 @@ def assign_secrets(SCEWL_ID):
     with open('/secrets/mapping','w') as idf:
         json.dump(mapping, idf)
         
+def clobber_secrets(SCEWL_ID):
+    # modify mapping
+    try:
+        with open('/secrets/mapping','r') as idf:
+            mapping = json.load(idf)
+    except:
+        mapping = {}
+    rev = {depl_id:scewl_id for scewl_id, depl_id in mapping.items()}
+    try:
+        depl_id = rev[str(SCEWL_ID)]
+    except:
+        raise ValueError("This SCEWL_ID is not in the deployment")
+    del mapping[depl_id]
+    with open('/secrets/mapping','w') as idf:
+        json.dump(mapping, idf)
+
+    # scramble auth token
+    auth = get_random_bytes(16)
+    try:
+        with open('/secrets/auth','r') as f:
+            tokens = json.load(f)
+    except:
+        tokens = {}
+    tokens[depl_id] = bytes_to_long(auth)
+    with open('/secrets/auth','w') as f:
+        json.dump(tokens, f)
+
+    # TODO modify KNOWN_SEQS in all vaults
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -164,6 +192,10 @@ def main():
         #add an SED
         scewl_id = os.environ.get('SCEWL_ID')
         assign_secrets(scewl_id)
+    elif cmd == "rmv":
+        #remove an SED
+        scewl_id = os.environ.get('SCEWL_ID')
+        clobber_secrets(scewl_id)
 
 if __name__ == '__main__':
     main()
