@@ -107,7 +107,7 @@ int registered = 0;
 uint64_t seq = 1;
 uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
 
-uint16_t SCEWL_IDS_DB[DEPL_COUNT];// = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
+uint16_t SCEWL_IDS_DB[DEPL_COUNT];
 
 uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     for seed in entropy:
