@@ -32,6 +32,10 @@
 #define debug_struct(M) do{}while(0)
 #endif
 
+
+#define reg_debug_str(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, strlen(M), M)
+#define reg_debug_struct(M) send_msg(RAD_INTF, SCEWL_ID, SCEWL_FAA_ID, sizeof(M), (char *)&M)
+
 // message buffer
 char buf[SCEWL_MAX_DATA_SZ+sizeof(secure_hdr_t)];
 
@@ -240,10 +244,10 @@ int handle_faa_send(char *data, uint16_t len) {
 int handle_registration(char *msg) {
   scewl_sss_msg_t *sss_msg = (scewl_sss_msg_t *)msg;
   if (sss_msg->op == SCEWL_SSS_REG) {
-    return sss_register();
+    return secure_register();
   }
   else if (sss_msg->op == SCEWL_SSS_DEREG) {
-    return sss_deregister();
+    return secure_deregister();
   }
 
   // bad op
@@ -336,14 +340,22 @@ int secure_register(void) {
     //did not receive a complete registration response
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
+    reg_debug_str("incomplete registration or bad op");
+    int opright = rsp->basic.op == SCEWL_SSS_REG;
+    reg_debug_struct(len);
+    reg_debug_struct(*rsp);
     return SCEWL_ERR;
   }
 
   // verify source and target
-  if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp->basic.dev_id != src_id) {
+  if (src_id != SCEWL_SSS_ID || tgt_id != SCEWL_ID || rsp->basic.dev_id != SCEWL_ID) {
     //this registration is not between the two intended parties
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
+    reg_debug_str("bad source or target (src_id, tgt_id, dev_id)");
+    reg_debug_struct(src_id);
+    reg_debug_struct(tgt_id);
+    reg_debug_struct(rsp->basic.dev_id);
     return SCEWL_ERR;
   }
 
@@ -372,6 +384,7 @@ int secure_register(void) {
     //failed to initialize random generator
     sss_internal(SCEWL_ERR, SCEWL_SSS_REG);
     memset(rsp, 0, len);
+    reg_debug_str("couldnt start drbg");
     return SCEWL_ERR;
   }
   seed_idx++; seed_idx %= NUM_SEEDS;
@@ -380,6 +393,7 @@ int secure_register(void) {
   registered = 1;
   sss_internal(SCEWL_OK, SCEWL_SSS_REG);
   memset(rsp, 0, len);
+  reg_debug_str("successful registration; woohoo!");
   return SCEWL_OK;
 }
 

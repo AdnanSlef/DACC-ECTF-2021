@@ -39,8 +39,7 @@ The following fields are exchanged in these messages (see `/controller/controlle
 * `cryptkey, cryptiv`:
   * set in .crypt file at `create_deployment`
   * used to lock ECC keys at `create_deployment`
-  * pulled from .crypt file at `deploy`
-  * retrieved from SSS RAM at registration
+  * retrieved from .crypt file at registration
 * `entropky, entriv`:
   * randomly generated at registration
 * `depl_nonce`:
