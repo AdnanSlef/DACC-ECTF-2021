@@ -55,7 +55,7 @@ def realrecv(csock, n):
         if not recvd:
             logging.debug(f'Detected closed connection while trying to recv {n} bytes')
             raise ConnectionResetError
-    return data
+    return data[:n]
 
 # try to send a whole buffer
 def realsend(csock, buf):
@@ -106,11 +106,14 @@ class SSS:
 
     def handle_registration(self, dev_id, csock):
         # receive rest of registration request
-        data = realrecv(csock, 0)#sizeof['sss_reg_req_t']-sizeof['scewl_sss_msg_t'])
+        data = realrecv(csock, 0)#sizeof['sss_reg_req_t']-sizeof['scewl_sss_msg_t']) TODO
         logging.debug(f'Received registration buffer: {repr(data)}')
-        auth = data
+        auth = self.auth[dev_id] #TODO auth = data
         
-        #todo verify authentication token
+        # verify authentication token
+        if not bequal(self.auth[dev_id], auth):
+            logging.info("{dev_id} failed registration auth")
+            return
 
         # form a registration response
         '''
@@ -128,12 +131,12 @@ typedef struct sss_reg_rsp_t {
   uint8_t  depl_nonce[16];   //replay protection
 } sss_reg_rsp_t;
         '''
-        basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)#todo len
+        basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)#TODO change 4 to sizeof['sss_reg_req_t']
         padding = struct.pack('>I', 0xC001DACC)
-        ids_db = struct.pack('<256H', *self.create_map(dev_id)) #todo make map file and pull it
-        seq = struct.pack('<Q', 0) #todo set and store seq
-        known_seqs = struct.pack('<256Q', *[0]*256) #todo set and store known_seqs
-        cryptkey = b'\0'*16 #todo set crypt key/iv
+        ids_db = struct.pack('<256H', *self.create_map(dev_id))
+        seq = struct.pack('<Q', 0) #TODO set and store seq
+        known_seqs = struct.pack('<256Q', *[0]*256) #TODO set and store known_seqs
+        cryptkey = b'\0'*16 #TODO set crypt key/iv
         cryptiv = b'\0'*16
         entropky = get_random_bytes(16)
         entriv = get_random_bytes(16)
@@ -141,8 +144,8 @@ typedef struct sss_reg_rsp_t {
 
         # craft response from components
         rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
-        logging.debug(f'Registration response would be ({len(rsp)}B) {repr(rsp)}') #todo remove
-        rsp = basic #todo remove
+        logging.debug(f'Registration response is ({len(rsp)}B) {repr(rsp)}')
+        rsp = basic #TODO remove
 
         # send registration response to SED
         logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
@@ -157,7 +160,7 @@ typedef struct sss_reg_rsp_t {
         data = realrecv(csock, 0)#sizeof['sss_dereg_req_t'] - sizeof['scewl_sss_msg_t'])
         logging.debug(f'Received deregistration buffer: {repr(data)}')
 
-        #todo unpack deregistration request
+        #unpack deregistration request
         '''
 // deregistration request message (2080B)
 typedef struct sss_dereg_req_t {
@@ -168,9 +171,19 @@ typedef struct sss_dereg_req_t {
   uint64_t known_seqs[DEPL_COUNT];
 } sss_dereg_req_t;
         '''
-
-        #todo verify authentication token
-        #todo store seq and known_seqs
+        '''TODO uncomment
+        padding, auth, seq = struct.unpack('<I16sQ', data[:28])
+        known_seqs = struct.unpack('<256Q', data[28:])
+        '''
+        auth = self.auth[dev_id] #TODO remove
+        
+        # verify authentication token
+        if not bequal(self.auth[dev_id], auth):
+            logging.info("{dev_id} failed registration auth")
+            return
+        
+        #store seq and known_seqs in vault
+        #TODO
 
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
         
