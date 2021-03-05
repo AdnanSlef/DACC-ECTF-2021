@@ -66,14 +66,14 @@ class SSS:
                 arr[depl_id] = self.mapping[depl_id]
         struct.pack('<256H', *arr)
 
-    def handle_register(self, dev_id, csock):
+    def handle_registration(self, dev_id, csock):
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)
         
         logging.debug(f'Sending {dev_id} reg response {repr(data)}')
         csock.send(rsp)
         self.devs[dev_id] = Device(dev_id, csock)
 
-    def handle_deregister(self, dev_id, csock):
+    def handle_deregistration(self, dev_id, csock):
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
 
         logging.debug(f'Sending {dev_id} dereg response {repr(data)}')
@@ -99,12 +99,12 @@ class SSS:
         # requesting registration
         if op == REG and dev_id not in self.devs and len(self.devs)<16:# and self.sock_ready(csock):
             logging.info(f'{dev_id} is asking to register')
-            handle_registration(dev_id, csock)
+            self.handle_registration(dev_id, csock)
 
         # requesting deregistration
         elif op == DEREG and dev_id in self.devs:# and self.sock_ready(csock):
             logging.info(f'{dev_id} is asking to deregister')
-            handle_deregistration(dev_id, csock)
+            self.handle_deregistration(dev_id, csock)
 
         # no operation could be performed
         else:
