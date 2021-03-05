@@ -227,20 +227,27 @@ def parse_args():
     parser.add_argument('sockf', help='Path to socket to bind the SSS to')
     return parser.parse_args()
 
+# pulls scewl <--> depl id mapping from disk
+def get_mapping():
+    return {} #TODO
+
+# pulls authentication tokens from disk
+def get_auth():
+    return {} #TODO
 
 def main():
     args = parse_args()
 
-    # Here is where deploy-time tasks are run
+    ### Here is where deploy-time tasks are run
 
     # generate depl_nonce
     depl_nonce = get_random_bytes(16)
 
-    # TODO pull mapping to SSS RAM, {depl_id : scewl_id}
-    mapping = {}
+    # pull mapping to SSS RAM, {depl_id : scewl_id}
+    mapping = get_mapping()
 
-    # TODO pull AUTH dict to SSS RAM, {scewl_id : auth_token}
-    auth = {}
+    # pull AUTH dict to SSS RAM, {scewl_id : auth_token}
+    auth = get_auth()
 
     ### End deploy-time tasks
 
