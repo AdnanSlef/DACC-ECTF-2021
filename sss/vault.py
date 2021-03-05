@@ -2,7 +2,10 @@
 
 # MITRE 2021 Collegiate Embedded Capture-The-Flag
 # SED Data Vault for the Scewl Security Server
+#
+# 0xDACC
 # Adrian Self
+# Delaware Area Career Center
 
 import os
 from Crypto.Util.number import bytes_to_long, long_to_bytes
