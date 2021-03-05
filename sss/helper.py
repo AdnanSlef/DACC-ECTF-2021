@@ -72,7 +72,7 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
     with open(f'/secrets/{depl_id}.crypt', 'wb') as f:
         f.write(cryptkey)
         f.write(cryptiv)
-    ctr = Counter.new(128, initial_value=bytes_to_long(cryptiv), little_endian=0) #TODO verify endianness
+    ctr = Counter.new(128, initial_value=bytes_to_long(cryptiv), little_endian=0)
     cipher = AES.new(cryptkey, AES.MODE_CTR, counter=ctr)
     pubkeys = [cipher.encrypt(x) for x in pubkeys]
     brdcst_public = cipher.encrypt(brdcst_public)
@@ -95,7 +95,7 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
 #define DEPL_BRDCST_ID 0xFFFF
 #define ECC_PUBSIZE {ECC_PUBSIZE}
 #define ECC_PRIVSIZE {ECC_PRIVSIZE}
-#define SLOTH 0 // seconds to send 0x100 bytes of data (TODO 30)
+#define SLOTH 30 // seconds to send 0x100 bytes of data
 #define ONE_SECOND 0x10000000 // iterations needed to wait one second
 #define NUM_SEEDS {NUM_SEEDS}
 uint16_t seed_idx = 0;
@@ -107,7 +107,7 @@ int registered = 0;
 uint64_t seq = 1;
 uint64_t KNOWN_SEQS[DEPL_COUNT] = {{ {', '.join('0' for _ in range(DEPL_COUNT))} }};
 
-uint16_t SCEWL_IDS_DB[DEPL_COUNT] = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
+uint16_t SCEWL_IDS_DB[DEPL_COUNT];// = {{ {', '.join([str(x) for x in range(10,10+DEPL_COUNT)])} }};//TODO populated at registration
 
 uint8_t ENTROPY[NUM_SEEDS][32] = {{"""
     for seed in entropy:
@@ -191,7 +191,6 @@ def clobber_secrets(SCEWL_ID):
     with open('/secrets/auth','w') as f:
         json.dump(tokens, f)
 
-    # TODO modify KNOWN_SEQS in all vaults
 
 def get_args():
     parser = argparse.ArgumentParser()

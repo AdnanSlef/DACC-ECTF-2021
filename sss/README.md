@@ -33,7 +33,6 @@ The following fields are exchanged in these messages (see `/controller/controlle
   * retrieved from .seqs file at registration
 * `KNOWN_SEQS[256]`:
   * set to all zeroes at `create_deployment` in depl secrets and .seqs file
-  * changed to 0xffff ffff ffff ffff for removed index in all .seqs files at `remove_sed`
   * stored in .seqs file at deregistration
   * retrieved from .seqs file at registration
 * `cryptkey, cryptiv`:
