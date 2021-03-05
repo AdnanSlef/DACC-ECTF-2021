@@ -33,6 +33,22 @@ Device = NamedTuple('Device', [('id', int), ('csock', socket.socket)])
 
 sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
 
+# try to recv a whole buffer
+def realrecv(csock, n):
+    data = b''
+    while len(data) < n:
+        recvd = csock.recv(min(n - len(data), 1024))
+        data += recvd
+
+        # check for closed connection
+        if not recvd:
+            logging.debug('Detected closed connection when looking for registration req')
+            raise ConnectionResetError
+
+# try to send a whole buffer
+def realsend(csock, buf):
+    pass
+
 class SSS:
     def __init__(self, sockf, depl_nonce, mapping, auth):
         self.depl_nonce = depl_nonce
@@ -109,15 +125,32 @@ typedef struct sss_reg_rsp_t {
         entriv = get_random_bytes(16)
         depl_nonce = self.depl_nonce
 
+        # craft response from components
         rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
-        logging.debug(f'Registration response would be ({len(rsp)}B){repr(rsp)}')
+        logging.debug(f'Registration response would be ({len(rsp)}B){repr(rsp)}') #todo remove
         rsp = basic #todo remove
 
+        # send registration response to SED
         logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
         csock.send(rsp)
+        
+        # register in the SSS
         self.devs[dev_id] = Device(dev_id, csock)
 
     def handle_deregistration(self, dev_id, csock):
+        # receive rest of registration request
+        data = b''
+        while len(data) < 0:#todo set to 16
+            recvd = csock.recv(16 - len(data))
+            data += recvd
+
+            # check for closed connection
+            if not recvd:
+                logging.debug('Detected closed connection when looking for registration req')
+                raise ConnectionResetError
+        logging.debug(f'Received registration buffer: {repr(data)}')
+        auth = data
+        
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
 
         logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
