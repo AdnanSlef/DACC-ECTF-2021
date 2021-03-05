@@ -69,14 +69,14 @@ class SSS:
     def handle_registration(self, dev_id, csock):
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, REG)
         
-        logging.debug(f'Sending {dev_id} reg response {repr(data)}')
+        logging.debug(f'Sending {dev_id} reg response {repr(rsp)}')
         csock.send(rsp)
         self.devs[dev_id] = Device(dev_id, csock)
 
     def handle_deregistration(self, dev_id, csock):
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
 
-        logging.debug(f'Sending {dev_id} dereg response {repr(data)}')
+        logging.debug(f'Sending {dev_id} dereg response {repr(rsp)}')
         csock.send(rsp)
         del self.devs[dev_id]
 
