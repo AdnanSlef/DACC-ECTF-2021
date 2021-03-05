@@ -11,7 +11,6 @@ The SCEWL Security Server uses several files:
   in a loop, registering and deregistering SEDs.
 * `helper.py`: Helps with deployment, performing tasks for `create_deployment`, `add_sed`,
   and `remove_sed`.
-* `vault.py`: Handles storage of data for each SED.
 * `/secrets`: On the SSS docker, the `/secrets` directory is used for data storage, including
   sensitive information.
 * `/secrets/depl_id_{id}`: The secrets file assigned to a deployment id. This is created at
@@ -21,25 +20,27 @@ The SCEWL Security Server uses several files:
 * `/secrets/mapping`: Maps between SCEWL IDs and deployment IDs. Updated at `add_sed` and `remove_sed`.
 * `/secrets/auth`: Stores the authorization tokens for registration/deregistration of each SED.
   Created at `create_deployment` and updated at `remove_sed`.
-* `/secrets/{id}.vault`: Stores data on disk for the SED.
+* `/secrets/{id}.crypt`: Stores unlock keys on disk for the SED.
+* `/secrets/{id}.seqs`: Stores sequence numbers on disk for the SED.
 
 ## Data Fields
 The SSS interacts with the SCEWL Bus Controllers during registration and deregistration.
 The following fields are exchanged in these messages (see `/controller/controller.h` for structs):
 
 * `seq`:
-  * set to 1 at `create_deployment` in depl secrets and vault
-  * stored in vault at deregistration
-  * retrieved from vault at registration
+  * set to 1 at `create_deployment` in depl secrets and .seqs file
+  * stored in .seqs file at deregistration
+  * retrieved from .seqs file at registration
 * `KNOWN_SEQS[256]`:
-  * set to all zeroes at `create_deployment` in depl secrets and vault
-  * changed to 0xffff ffff ffff ffff for removed index in all vaults at `remove_sed`
-  * stored in vault at deregistration
-  * retrieved from vault at registration
+  * set to all zeroes at `create_deployment` in depl secrets and .seqs file
+  * changed to 0xffff ffff ffff ffff for removed index in all .seqs files at `remove_sed`
+  * stored in .seqs file at deregistration
+  * retrieved from .seqs file at registration
 * `cryptkey, cryptiv`:
-  * set in vault at `create_deployment`
+  * set in .crypt file at `create_deployment`
   * used to lock ECC keys at `create_deployment`
-  * retrieved from vault at registration
+  * pulled from .crypt file at `deploy`
+  * retrieved from SSS RAM at registration
 * `entropky, entriv`:
   * randomly generated at registration
 * `depl_nonce`:

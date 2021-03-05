@@ -11,8 +11,10 @@ import argparse
 import os
 import json
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util import Counter
 from Crypto.Random import get_random_bytes
 import Crypto.PublicKey.ECC as ecc
+from Crypto.Cipher import AES
 
 # CONSTANTS
 ECC_PRIVSIZE = 32
@@ -64,7 +66,19 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
     with open('/secrets/auth','w') as f:
         json.dump(tokens, f)
 
-    # Create vault file with secrets for SSS usage
+    # Lock ECC keys and store the key in SSS
+    cryptkey = get_random_bytes(16)
+    cryptiv = get_random_bytes(16)
+    with open(f'/secrets/{depl_id}.crypt', 'wb') as f:
+        f.write(cryptkey)
+        f.write(cryptiv)
+    ctr = Counter.new(128, initial_value=bytes_to_long(cryptiv), little_endian=1) #TODO verify endianness
+    cipher = AES.new(cryptkey, AES.MODE_CTR, counter=ctr)
+    _pubkeys = [cipher.encrypt(x) for x in pubkeys]
+    _brdcst_public = cipher.encrypt(brdcst_public)
+    _privkey = cipher.encrypt(privkey)
+    _brdcst_privkey = cipher.encrypt(brdcst_privkey)
+    # TODO remove underscores
 
     # Create header file with secrets for SED Controller usage
     secrets = f"""
