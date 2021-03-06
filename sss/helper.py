@@ -95,7 +95,7 @@ def make_a_secret(depl_id, depl_nonce, privkey, pubkeys, brdcst_keys):
 #define DEPL_BRDCST_ID 0xFFFF
 #define ECC_PUBSIZE {ECC_PUBSIZE}
 #define ECC_PRIVSIZE {ECC_PRIVSIZE}
-#define SLOTH 15 // seconds to send 0x100 bytes of data
+#define SLOTH 13 // seconds to send 0x100 bytes of data
 #define ONE_SECOND 0x10000000 // iterations needed to wait one second
 #define NUM_SEEDS {NUM_SEEDS}
 uint16_t seed_idx = 0;
