@@ -235,44 +235,6 @@ int handle_registration(char *msg) {
 }
 
 
-int sss_register() {
-  scewl_sss_msg_t msg;
-  scewl_id_t src_id, tgt_id;
-  int status, len;
-
-  // fill registration message
-  msg.dev_id = SCEWL_ID;
-  msg.op = SCEWL_SSS_REG;
-  
-  // send registration
-  status = send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(msg), (char *)&msg);
-  if (status == SCEWL_ERR) {
-    return SCEWL_ERR;
-  }
-
-  // receive response
-  len = read_msg(SSS_INTF, (char *)&msg, &src_id, &tgt_id, sizeof(scewl_sss_msg_t), 1);
-
-  // notify CPU of response
-  status = send_msg(CPU_INTF, src_id, tgt_id, len, (char *)&msg);
-  if (status == SCEWL_ERR) {
-    return SCEWL_ERR;
-  }
-  
-  /*    instantiate drbg    */
-  if (sb_hmac_drbg_init(&drbg, ENTROPY[seed_idx], 32, NONCE, 16, depl_id_str, 8) != SB_SUCCESS) {
-    return SCEWL_ERR;
-  }
-  seed_idx++; seed_idx %= NUM_SEEDS;
-  /**************************/
-
-  // successfully registered
-  registered = 1;
-
-  return SCEWL_OK;
-}
-
-
 void sss_internal(int code, int type) {
   scewl_sss_msg_t msg;
   
@@ -421,37 +383,6 @@ int secure_deregister(void) {
   sss_internal(SCEWL_OK, SCEWL_SSS_DEREG);
   while(1){/* spin merrily in circles */}
 
-}
-
-
-int sss_deregister() {
-  scewl_sss_msg_t msg;
-  scewl_id_t src_id, tgt_id;
-  int status, len;
-
-  // fill registration message
-  msg.dev_id = SCEWL_ID;
-  msg.op = SCEWL_SSS_DEREG;
-  
-  // send registration
-  status = send_msg(SSS_INTF, SCEWL_ID, SCEWL_SSS_ID, sizeof(msg), (char *)&msg);
-  if (status == SCEWL_ERR) {
-    return SCEWL_ERR;
-  }
-
-  // receive response
-  len = read_msg(SSS_INTF, (char *)&msg, &src_id, &tgt_id, sizeof(scewl_sss_msg_t), 1);
-
-  // notify CPU of response
-  status = send_msg(CPU_INTF, src_id, tgt_id, len, (char *)&msg);
-  if (status == SCEWL_ERR) {
-    return SCEWL_ERR;
-  }
-  
-  // successfully deregistered
-  registered = 0;
-
-  return SCEWL_OK;
 }
 
 
