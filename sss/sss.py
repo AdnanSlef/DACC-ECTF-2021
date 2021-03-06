@@ -292,7 +292,6 @@ def parse_args():
 
 # pulls scewl <--> depl id mapping from disk
 def get_mapping():
-    #return {0:10,1:11}
     with open('/secrets/mapping','r') as f:
         mapping = json.load(f)
     logging.debug(f"Found mapping on disk: {intify(mapping)}")
