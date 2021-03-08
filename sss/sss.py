@@ -202,7 +202,7 @@ typedef struct sss_dereg_req_t {
         sequences = {'seq':seq, 'known_seqs':known_seqs}
         with open(f'/secrets/{depl_id}.seqs','w') as f:
             json.dump(sequences, f)
-        logging.debug("writing seqs {json.dumps(sequences)}")
+        logging.debug(f"writing seqs {json.dumps(sequences)}")
 
         # form deregistration response
         rsp = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, 4, dev_id, DEREG)
