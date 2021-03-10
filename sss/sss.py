@@ -32,8 +32,6 @@ ALREADY, REG, DEREG = -1, 0, 1
 
 logging.basicConfig(level=logging.DEBUG)
 
-Device = NamedTuple('Device', [('id', int), ('csock', socket.socket)])
-
 sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
 
 # determine whether bytes objects are equivalent
@@ -89,7 +87,6 @@ class SSS:
         self.sock.bind(sockf)
         self.sock.listen(20)
 
-        self.devs = {}
         self.registered = []
     
     @staticmethod
@@ -229,12 +226,7 @@ typedef struct sss_dereg_req_t {
         #unpack basic request
         _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
         
-        """
-        # attribute socket
-        self.devs[dev_id] = Device(dev_id, csock)
-        """
-
-        logging.info(f"{{ {self.registered} }} devices are registered")
+        logging.info(f"{{ {self.registered} }} devices are registered before")
 
         # handle registration
         if op == REG and dev_id not in self.registered and len(self.registered)<16:
@@ -250,12 +242,23 @@ typedef struct sss_dereg_req_t {
         else:
             logging.info(f'{dev_id} was denied operation {op}')
 
+        logging.info(f"{{ {self.registered} }} devices are registered after")
+
 
     def start(self):
         unattributed_socks = set()
+        
+        last_logged = set()
 
         # serve forever
         while True:
+            unattributed_socks = set(filter(lambda x: not x._closed, unattributed_socks))
+
+            # log the socks set
+            if last_logged != unattributed_socks:
+                logging.debug(unattributed_socks)
+                last_logged = set(unattributed_socks)
+
             # check for new client
             if self.sock_ready(self.sock):
                 csock, _ = self.sock.accept()
@@ -275,22 +278,6 @@ typedef struct sss_dereg_req_t {
                     #unattributed_socks.remove(csock)
                     csock.close()
                     break
-           
-            """
-            # check pool of attributed sockets
-            old_ids = []
-            for dev in list(self.devs.values()):
-                if dev.csock and self.sock_ready(dev.csock):
-                    try:
-                        self.handle_transaction(dev.csock)
-                    except (ConnectionResetError, BrokenPipeError):
-                        logging.info(f'{dev.id}:Connection closed')
-                        dev.csock.close()
-                        old_ids.append(dev.id)
-            
-            for dev_id in old_ids:
-                del self.devs[dev_id]
-            """
 
 
 def parse_args():
