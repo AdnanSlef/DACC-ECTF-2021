@@ -29,7 +29,7 @@ FAA_ID = 2
 
 
 class Sock:
-    def __init__(self, sock_path: str, q_len=1, log_level=logging.INFO, mode: int = None):
+    def __init__(self, sock_path: str, q_len=1, log_level=logging.DEBUG, mode: int = None):
         self.sock_path = sock_path
         self.buf = b''
 
@@ -135,7 +135,7 @@ class ScewlSock(Sock):
     SCEWL_MAGIC = b'SC'
     MITM_MAGIC = b'MM'
 
-    def __init__(self, sock_path: str, q_len=1, log_level=logging.INFO, mode: int = None):
+    def __init__(self, sock_path: str, q_len=1, log_level=logging.DEBUG, mode: int = None):
         super().__init__(sock_path, q_len, log_level, mode)
 
     def deserialize(self) -> Optional[SCEWLMessage]:
@@ -186,7 +186,7 @@ class MitM(ScewlSock):
         return msgs + recvd_msgs
 
 class SCSock(Sock):
-    def __init__(self, sock_path: str, q_len=1, log_level=logging.INFO, mode: int = None):
+    def __init__(self, sock_path: str, q_len=1, log_level=logging.DEBUG, mode: int = None):
         super().__init__(sock_path, q_len, log_level, mode)
     
     def deserialize(self) -> bytes:

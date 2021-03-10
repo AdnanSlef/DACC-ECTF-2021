@@ -54,6 +54,7 @@ def realrecv(csock, n):
         # check for closed connection
         if not recvd:
             logging.debug(f'Detected closed connection while trying to recv {n} bytes')
+            logging.debug(f'Only managed to get ({len(data)}B) {repr(data)}')
             raise ConnectionResetError
     return data[:n]
 
@@ -65,7 +66,7 @@ def realsend(csock, buf):
 
         # check for closed connection
         if not sent:
-            logging.debug('Detected closed connection when looking for registration req')
+            logging.debug('Failed to send {len(buf)}, sent {totalsent}')
             raise ConnectionResetError
         totalsent += sent
     logging.debug(f"successfully sent {totalsent} bytes")
@@ -93,8 +94,11 @@ class SSS:
     
     @staticmethod
     def sock_ready(sock, op='r'):
-        rready, wready, _ = select.select([sock], [sock], [], 0)
-        return rready if op == 'r' else wready
+        try:
+            rready, wready, _ = select.select([sock], [sock], [], 0)
+            return rready if op == 'r' else wready
+        except ValueError:
+            return False
     
     # prepare the SCEWL <--> DEPL mapping for an SED
     def create_map(self, SCEWL_ID):
@@ -224,9 +228,11 @@ typedef struct sss_dereg_req_t {
 
         #unpack basic request
         _sc, _tgt, _src, _len, dev_id, op = struct.unpack('<HHHHHH', data)
-
+        
+        """
         # attribute socket
         self.devs[dev_id] = Device(dev_id, csock)
+        """
 
         logging.info(f"{{ {self.registered} }} devices are registered")
 
@@ -257,22 +263,23 @@ typedef struct sss_dereg_req_t {
                 unattributed_socks.add(csock)
                 continue
 
-            # check pool of unattributed sockets first
+            # check pool of unattributed sockets
             for csock in unattributed_socks:
                 try:
                     if self.sock_ready(csock):
                         self.handle_transaction(csock)
-                        unattributed_socks.remove(csock)
+                        #unattributed_socks.remove(csock)
                         break
                 except (ConnectionResetError, BrokenPipeError):
                     logging.info(':Connection closed')
-                    unattributed_socks.remove(csock)
+                    #unattributed_socks.remove(csock)
                     csock.close()
                     break
-            
+           
+            """
             # check pool of attributed sockets
             old_ids = []
-            for dev in self.devs.values():
+            for dev in list(self.devs.values()):
                 if dev.csock and self.sock_ready(dev.csock):
                     try:
                         self.handle_transaction(dev.csock)
@@ -283,6 +290,7 @@ typedef struct sss_dereg_req_t {
             
             for dev_id in old_ids:
                 del self.devs[dev_id]
+            """
 
 
 def parse_args():
@@ -339,6 +347,9 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        logging.info(f'Dying with Exception: {e}')
+        logging.info(f'Dying with Exception:')
+        logging.info(str(type(e)))
+        logging.info(str(e.args))
+        logging.info(e)
         while(1):
             pass
