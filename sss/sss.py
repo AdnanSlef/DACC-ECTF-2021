@@ -32,7 +32,7 @@ ALREADY, REG, DEREG = -1, 0, 1
 
 logging.basicConfig(level=logging.DEBUG)
 
-sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':2656, 'sss_dereg_req_t':2080, 'sss_dereg_rsp_t':4}
+sizeof = {'scewl_sss_msg_t':4, 'sss_reg_req_t':20, 'sss_reg_rsp_t':1624, 'sss_dereg_req_t':1048, 'sss_dereg_rsp_t':4}
 
 # determine whether bytes objects are equivalent
 def bequal(chall, guess):
@@ -68,6 +68,7 @@ def realsend(csock, buf):
             raise ConnectionResetError
         totalsent += sent
     logging.debug(f"successfully sent {totalsent} bytes")
+
 
 class SSS:
     def __init__(self, sockf, depl_nonce, mapping, auth):
@@ -127,13 +128,12 @@ class SSS:
 
         # form a registration response
         '''
-// registration response message (2656B)
+// registration response message (1624B)
 typedef struct sss_reg_rsp_t {
   scewl_sss_msg_t basic;
-  uint32_t padding;
   uint16_t ids_db[DEPL_COUNT];     //maps SCEWL ids to deployment ids
-  uint64_t seq;                    //this SED's sequence number
-  uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
+  uint32_t seq;                    //this SED's sequence number
+  uint32_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
   uint8_t  cryptkey[16]; //key to unlock ecc
   uint8_t  cryptiv[16];  // iv to unlock ecc
   uint8_t  entropky[16]; //just random bytes
@@ -142,12 +142,11 @@ typedef struct sss_reg_rsp_t {
 } sss_reg_rsp_t;
         '''
         basic = struct.pack('<2sHHHHh', b'SC', dev_id, SSS_ID, sizeof['sss_reg_rsp_t'], dev_id, REG)
-        padding = struct.pack('>I', 0xC001DACC)
         ids_db = struct.pack('<256H', *self.create_map(dev_id))
         with open(f'/secrets/{depl_id}.seqs','r') as f:
             sequences = json.load(f)
-        seq = struct.pack('<Q', sequences['seq'])
-        known_seqs = struct.pack('<256Q', *sequences['known_seqs'])
+        seq = struct.pack('<I', sequences['seq'])
+        known_seqs = struct.pack('<256I', *sequences['known_seqs'])
         with open(f'/secrets/{depl_id}.crypt','rb') as f:
             cryptkey = f.read(16)
             cryptiv = f.read(16)
@@ -156,7 +155,7 @@ typedef struct sss_reg_rsp_t {
         depl_nonce = self.depl_nonce
 
         # craft response from components
-        rsp = basic + padding + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
+        rsp = basic + ids_db + seq + known_seqs + cryptkey + cryptiv + entropky + entriv + depl_nonce
 
         # send registration response to SED
         logging.debug(f'Sending {dev_id} reg response ({len(rsp)}B): {repr(rsp)}')
@@ -180,18 +179,17 @@ typedef struct sss_reg_rsp_t {
 
         #unpack deregistration request
         '''
-// deregistration request message (2080B)
+// deregistration request message (1048B)
 typedef struct sss_dereg_req_t {
   scewl_sss_msg_t basic;
-  uint32_t padding;
   uint8_t auth[16];
-  uint64_t seq;
-  uint64_t known_seqs[DEPL_COUNT];
+  uint32_t seq;
+  uint32_t known_seqs[DEPL_COUNT];
 } sss_dereg_req_t;
         '''
-        padding, auth, seq = struct.unpack('<I16sQ', data[:28])
-        known_seqs = struct.unpack('<256Q', data[28:])
-        logging.debug(f"got known seqs {known_seqs}")
+        auth, seq = struct.unpack('<16sI', data[:20])
+        known_seqs = struct.unpack('<256I', data[20:])
+        logging.debug(f"got seq {seq} and known seqs {known_seqs}")
         
         # verify authentication token
         if not bequal(self.auth[dev_id], auth):
@@ -271,11 +269,9 @@ typedef struct sss_dereg_req_t {
                 try:
                     if self.sock_ready(csock):
                         self.handle_transaction(csock)
-                        #unattributed_socks.remove(csock)
                         break
                 except (ConnectionResetError, BrokenPipeError):
                     logging.info(':Connection closed')
-                    #unattributed_socks.remove(csock)
                     csock.close()
                     break
 
@@ -333,6 +329,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    # catch and hang
     except Exception as e:
         logging.info(f'Dying with Exception:')
         logging.info(str(type(e)))

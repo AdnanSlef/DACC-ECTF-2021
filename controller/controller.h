@@ -69,13 +69,12 @@ typedef struct sss_reg_req_t {
   uint8_t auth[16];
 } sss_reg_req_t;
 
-// registration response message (2656B)
+// registration response message (1624B)
 typedef struct sss_reg_rsp_t {
   scewl_sss_msg_t basic;
-  uint32_t padding;
   uint16_t ids_db[DEPL_COUNT];     //maps SCEWL ids to deployment ids
-  uint64_t seq;                    //this SED's sequence number
-  uint64_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
+  uint32_t seq;                    //this SED's sequence number
+  uint32_t known_seqs[DEPL_COUNT]; //last-seen seq numbers
   uint8_t  cryptkey[16]; //key to unlock ecc
   uint8_t  cryptiv[16];  // iv to unlock ecc
   uint8_t  entropky[16]; //just random bytes
@@ -83,13 +82,12 @@ typedef struct sss_reg_rsp_t {
   uint8_t  depl_nonce[16];   //replay protection
 } sss_reg_rsp_t;
 
-// deregistration request message (2080B)
+// deregistration request message (1048B)
 typedef struct sss_dereg_req_t {
   scewl_sss_msg_t basic;
-  uint32_t padding;
   uint8_t auth[16];
-  uint64_t seq;
-  uint64_t known_seqs[DEPL_COUNT];
+  uint32_t seq;
+  uint32_t known_seqs[DEPL_COUNT];
 } sss_dereg_req_t;
 
 // deregistration response message (16B)
