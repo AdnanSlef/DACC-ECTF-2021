@@ -242,7 +242,7 @@ void sss_internal(int code, int type) {
   
   switch(code) {
     case SCEWL_OK:
-      msg.op = type? SCEWL_SSS_DEREG : SCEWL_SSS_REG;
+      msg.op = type;
       break;
     case SCEWL_ERR:
     case SCEWL_ALREADY:
@@ -699,9 +699,7 @@ int main() {
         len = read_msg(CPU_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len==SCEWL_NO_MSG) continue;
 
-        if (tgt_id == SCEWL_BRDCST_ID) {
-          secure_send(buf, tgt_id, len);
-        } else if (tgt_id == SCEWL_SSS_ID) {
+        if (tgt_id == SCEWL_SSS_ID) {
           handle_registration(buf);
         } else if (tgt_id == SCEWL_FAA_ID) {
           handle_faa_send(buf, len);
@@ -718,16 +716,14 @@ int main() {
         len = read_msg(RAD_INTF, buf, &src_id, &tgt_id, sizeof(buf), 1);
         if(len == SCEWL_NO_MSG) continue;
 
-        if (tgt_id == SCEWL_BRDCST_ID) {
-          if (src_id == SCEWL_FAA_ID) {
-            handle_faa_recv(buf, len);
-          }
-          secure_recv(buf, src_id, len, 1);
-        } else if (src_id == SCEWL_FAA_ID) {
+        if (src_id == SCEWL_FAA_ID) {
           handle_faa_recv(buf, len);
+        } else if (tgt_id == SCEWL_BRDCST_ID) {
+          secure_recv(buf, src_id, len, 1);
         } else {
           secure_recv(buf, src_id, len, 0);
         }
+
       }
     }
   }
