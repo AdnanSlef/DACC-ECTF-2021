@@ -662,7 +662,7 @@ int secure_recv(char *data, scewl_id_t src_scewl_id, uint16_t len, _Bool broadca
   KNOWN_SEQS[net_hdr->src] = net_hdr->seq;
   
   //pass message to the CPU
-  send_msg(CPU_INTF, src_scewl_id, SCEWL_ID, net_hdr->ctlen, xtext);
+  send_msg(CPU_INTF, src_scewl_id, broadcast?0:SCEWL_ID, net_hdr->ctlen, xtext);
 
   //clear buffer for future use
   memset(data, 0, len);
